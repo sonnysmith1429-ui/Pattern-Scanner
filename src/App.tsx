@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Landing from './components/landing/Landing';
 import UploadScreen from './components/upload/UploadScreen';
@@ -11,6 +11,7 @@ import Profile from './components/profile/Profile';
 import Nav, { type Screen } from './components/nav/Nav';
 import Disclaimer from './components/ui/Disclaimer';
 import { generateScanResult, demoChartImage } from './lib/mockData';
+import { analyzeChartImage, type ChartAnalysis } from './lib/imageAnalysis';
 import type { ScanResult, WatchlistItem } from './lib/types';
 import {
   loadHistory,
@@ -27,6 +28,7 @@ export default function App() {
   const [screen, setScreen] = useState<AppScreen>('landing');
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [currentResult, setCurrentResult] = useState<ScanResult | null>(null);
+  const pendingAnalysis = useRef<Promise<ChartAnalysis> | null>(null);
 
   const [history, setHistory] = useState<ScanResult[]>(() => loadHistory());
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>(() => loadWatchlist());
@@ -45,17 +47,23 @@ export default function App() {
     saveWatchlist(watchlist);
   }, [watchlist]);
 
-  function handleScanComplete() {
-    if (!pendingImage) return;
-    const result = generateScanResult(pendingImage);
+  function startScan(image: string) {
+    setPendingImage(image);
+    pendingAnalysis.current = analyzeChartImage(image);
+    setScreen('scanning');
+  }
+
+  async function handleScanComplete() {
+    if (!pendingImage || !pendingAnalysis.current) return;
+    const analysis = await pendingAnalysis.current;
+    const result = generateScanResult(pendingImage, analysis);
     setCurrentResult(result);
     setHistory((h) => [result, ...h]);
     setScreen('dashboard');
   }
 
   function handleDemo() {
-    setPendingImage(demoChartImage());
-    setScreen('scanning');
+    startScan(demoChartImage());
   }
 
   function toggleFavourite(id: string) {
@@ -115,13 +123,7 @@ export default function App() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <UploadScreen
-                onBack={() => setScreen('landing')}
-                onScan={(image) => {
-                  setPendingImage(image);
-                  setScreen('scanning');
-                }}
-              />
+              <UploadScreen onBack={() => setScreen('landing')} onScan={startScan} />
             </motion.div>
           )}
 

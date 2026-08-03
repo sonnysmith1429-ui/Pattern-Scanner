@@ -7,6 +7,7 @@ import type {
   Trend,
   TradeBias,
 } from './types';
+import type { ChartAnalysis } from './imageAnalysis';
 
 export const PATTERN_LIBRARY = [
   'Ascending Triangle',
@@ -36,15 +37,7 @@ export const PATTERN_LIBRARY = [
   'Spinning Top',
 ] as const;
 
-const TRENDS: Trend[] = [
-  'Strong Uptrend',
-  'Moderate Uptrend',
-  'Sideways',
-  'Weak Downtrend',
-  'Strong Downtrend',
-];
-
-const BULLISH_PATTERNS = new Set([
+const BULLISH_PATTERNS = [
   'Ascending Triangle',
   'Bull Flag',
   'Cup and Handle',
@@ -54,9 +47,9 @@ const BULLISH_PATTERNS = new Set([
   'Support Bounce',
   'Morning Star',
   'Hammer',
-]);
+] as const;
 
-const BEARISH_PATTERNS = new Set([
+const BEARISH_PATTERNS = [
   'Descending Triangle',
   'Bear Flag',
   'Double Top',
@@ -65,7 +58,18 @@ const BEARISH_PATTERNS = new Set([
   'Resistance Rejection',
   'Evening Star',
   'Shooting Star',
-]);
+] as const;
+
+const NEUTRAL_PATTERNS = [
+  'Rectangle',
+  'Pennant',
+  'Channel',
+  'Engulfing Candle',
+  'Inside Bar',
+  'Outside Bar',
+  'Doji',
+  'Spinning Top',
+] as const;
 
 function rand(min: number, max: number) {
   return Math.random() * (max - min) + min;
@@ -88,74 +92,87 @@ function pickN<T>(arr: readonly T[], n: number): T[] {
   return out;
 }
 
-function generatePatterns(): RecognisedPattern[] {
+function generatePatterns(bias: Bias): RecognisedPattern[] {
   const count = randInt(2, 4);
-  return pickN(PATTERN_LIBRARY, count)
+  // Never mix in a pattern from the opposite bias — e.g. a bearish scan
+  // should never surface "Bull Flag" alongside "Head and Shoulders".
+  const primaryPool: readonly string[] =
+    bias === 'Bullish' ? BULLISH_PATTERNS : bias === 'Bearish' ? BEARISH_PATTERNS : NEUTRAL_PATTERNS;
+  const secondaryPool: readonly string[] = bias === 'Neutral' ? PATTERN_LIBRARY : [...primaryPool, ...NEUTRAL_PATTERNS];
+
+  const primaryCount = Math.min(Math.max(1, count - 1), primaryPool.length);
+  const chosen = pickN(primaryPool, primaryCount);
+  while (chosen.length < count) {
+    const remaining = secondaryPool.filter((p) => !chosen.includes(p));
+    if (!remaining.length) break;
+    chosen.push(pickN(remaining, 1)[0]);
+  }
+
+  return chosen
     .map((name) => ({ name, confidence: randInt(58, 96) }))
     .sort((a, b) => b.confidence - a.confidence);
 }
 
-function generateIndicators(trend: Trend): Indicators {
+function generateIndicators(
+  trend: Trend,
+  support: number,
+  resistance: number,
+  currentPrice: number,
+): Indicators {
   const bullishTilt = trend.includes('Uptrend') ? 1 : trend.includes('Downtrend') ? -1 : 0;
   return {
     rsi: Math.round(50 + bullishTilt * rand(8, 22) + rand(-6, 6)),
     macd: bullishTilt > 0 ? 'Bullish Crossover' : bullishTilt < 0 ? 'Bearish Crossover' : 'Flat',
     movingAverages:
       bullishTilt > 0 ? 'Above 50/200 MA' : bullishTilt < 0 ? 'Below 50/200 MA' : 'Mixed',
-    ema: Math.round(rand(100, 400) * 100) / 100,
-    vwap: Math.round(rand(100, 400) * 100) / 100,
+    ema: Math.round((currentPrice + currentPrice * rand(-0.015, 0.015)) * 100) / 100,
+    vwap: Math.round((currentPrice + currentPrice * rand(-0.02, 0.02)) * 100) / 100,
     volume: pick(['Above Average', 'Average', 'Below Average']),
     trendStrength: Math.max(5, Math.min(95, Math.round(55 + bullishTilt * rand(10, 25) + rand(-8, 8)))),
     momentum: Math.max(5, Math.min(95, Math.round(50 + bullishTilt * rand(10, 25) + rand(-8, 8)))),
     volatility: randInt(20, 85),
-    support: Math.round(rand(80, 380) * 100) / 100,
-    resistance: Math.round(rand(120, 420) * 100) / 100,
+    support,
+    resistance,
     riskLevel: randInt(20, 80),
   };
 }
 
-function biasFromPatterns(patterns: RecognisedPattern[], trend: Trend): Bias {
-  let score = 0;
-  for (const p of patterns) {
-    if (BULLISH_PATTERNS.has(p.name)) score += p.confidence;
-    if (BEARISH_PATTERNS.has(p.name)) score -= p.confidence;
-  }
-  if (trend.includes('Uptrend')) score += 30;
-  if (trend.includes('Downtrend')) score -= 30;
-  if (score > 20) return 'Bullish';
-  if (score < -20) return 'Bearish';
-  return 'Neutral';
-}
-
-function generateTradeBias(bias: Bias, indicators: Indicators): TradeBias {
-  const base = (indicators.support + indicators.resistance) / 2;
-  const spread = Math.abs(indicators.resistance - indicators.support) || 20;
-  let entry = base;
-  let takeProfit = base;
-  let stopLoss = base;
+function generateTradeBias(
+  bias: Bias,
+  support: number,
+  resistance: number,
+  currentPrice: number,
+  confidence: number,
+): TradeBias {
+  const spread = Math.max(resistance - support, currentPrice * 0.04);
+  let entry: number;
+  let takeProfit: number;
+  let stopLoss: number;
 
   if (bias === 'Bullish') {
-    entry = indicators.support + spread * 0.15;
-    takeProfit = indicators.resistance + spread * 0.35;
-    stopLoss = indicators.support - spread * 0.2;
+    // Buy near support, target above resistance, protect below support.
+    entry = support + spread * 0.15;
+    takeProfit = resistance + spread * 0.35;
+    stopLoss = support - spread * 0.2;
   } else if (bias === 'Bearish') {
-    entry = indicators.resistance - spread * 0.15;
-    takeProfit = indicators.support - spread * 0.35;
-    stopLoss = indicators.resistance + spread * 0.2;
+    // Short near resistance, target below support, protect above resistance.
+    entry = resistance - spread * 0.15;
+    takeProfit = support - spread * 0.35;
+    stopLoss = resistance + spread * 0.2;
   } else {
-    entry = base;
-    takeProfit = base + spread * 0.25;
-    stopLoss = base - spread * 0.25;
+    entry = currentPrice;
+    takeProfit = currentPrice + spread * 0.25;
+    stopLoss = currentPrice - spread * 0.25;
   }
 
   return {
     bias,
-    confidence: randInt(55, 92),
+    confidence: Math.max(52, Math.min(96, confidence + randInt(-4, 4))),
     entry: Math.round(entry * 100) / 100,
     takeProfit: Math.round(takeProfit * 100) / 100,
     stopLoss: Math.round(stopLoss * 100) / 100,
-    supportZone: indicators.support,
-    resistanceZone: indicators.resistance,
+    supportZone: support,
+    resistanceZone: resistance,
   };
 }
 
@@ -258,21 +275,21 @@ function explanationFor(
     : '';
   const biasNote =
     bias.bias === 'Neutral'
-      ? ' Overall signals are mixed, so this setup leans neutral rather than clearly directional.'
-      : ` This combination of signals leans ${bias.bias.toLowerCase()} from a purely technical standpoint.`;
+      ? ' Overall signals are mixed here, so the technical bias is neutral rather than clearly directional.'
+      : ` Overall, the technical bias here is ${bias.bias.toLowerCase()}.`;
 
   return `Looking at the uploaded chart, ${primary}${secondary}${biasNote} This analysis is provided for educational purposes only and should not be treated as financial advice.`;
 }
 
-export function generateScanResult(image: string): ScanResult {
-  const trend = pick(TRENDS);
-  const patterns = generatePatterns();
-  const indicators = generateIndicators(trend);
-  const bias = biasFromPatterns(patterns, trend);
-  const tradeBias = generateTradeBias(bias, indicators);
+export function generateScanResult(image: string, analysis: ChartAnalysis): ScanResult {
+  const { trend, bias, biasConfidence, support, resistance, currentPrice } = analysis;
+  const patterns = generatePatterns(bias);
+  const indicators = generateIndicators(trend, support, resistance, currentPrice);
+  const tradeBias = generateTradeBias(bias, support, resistance, currentPrice, biasConfidence);
   const overallConfidence = Math.round(
-    (patterns.reduce((s, p) => s + p.confidence, 0) / patterns.length) * 0.55 +
-      tradeBias.confidence * 0.45,
+    (patterns.reduce((s, p) => s + p.confidence, 0) / patterns.length) * 0.45 +
+      tradeBias.confidence * 0.3 +
+      biasConfidence * 0.25,
   );
 
   return {
@@ -280,7 +297,7 @@ export function generateScanResult(image: string): ScanResult {
     createdAt: new Date().toISOString(),
     image,
     trend,
-    trendConfidence: randInt(60, 95),
+    trendConfidence: Math.max(55, Math.min(97, biasConfidence + randInt(-3, 6))),
     patterns,
     indicators,
     tradeBias,
