@@ -282,7 +282,7 @@ function explanationFor(
 }
 
 export function generateScanResult(image: string, analysis: ChartAnalysis): ScanResult {
-  const { trend, bias, biasConfidence, support, resistance, currentPrice } = analysis;
+  const { trend, bias, biasConfidence, support, resistance, currentPrice, priceSource } = analysis;
   const patterns = generatePatterns(bias);
   const indicators = generateIndicators(trend, support, resistance, currentPrice);
   const tradeBias = generateTradeBias(bias, support, resistance, currentPrice, biasConfidence);
@@ -305,6 +305,8 @@ export function generateScanResult(image: string, analysis: ChartAnalysis): Scan
     explanation: explanationFor(trend, patterns, tradeBias),
     annotations: generateAnnotations(patterns, bias),
     favourite: false,
+    currentPrice,
+    priceSource,
   };
 }
 

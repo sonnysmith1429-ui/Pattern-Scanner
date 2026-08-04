@@ -11,6 +11,7 @@ import {
   RefreshCw,
   ScanLine,
   AlertCircle,
+  Tag,
 } from 'lucide-react';
 import GlowButton from '../ui/GlowButton';
 import GlassCard from '../ui/GlassCard';
@@ -19,11 +20,16 @@ import { demoChartImage } from '../../lib/mockData';
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif'];
 const ACCEPTED_EXT = /\.(png|jpe?g|heic|heif|webp)$/i;
 
+function parsePrice(raw: string): number | undefined {
+  const value = Number.parseFloat(raw);
+  return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
 export default function UploadScreen({
   onScan,
   onBack,
 }: {
-  onScan: (image: string) => void;
+  onScan: (image: string, manualPrice?: number) => void;
   onBack: () => void;
 }) {
   const [image, setImage] = useState<string | null>(null);
@@ -32,6 +38,7 @@ export default function UploadScreen({
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [cropMode, setCropMode] = useState(false);
+  const [priceInput, setPriceInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((file: File | undefined) => {
@@ -48,6 +55,7 @@ export default function UploadScreen({
       setZoom(1);
       setRotation(0);
       setCropMode(false);
+      setPriceInput('');
     };
     reader.readAsDataURL(file);
   }, []);
@@ -64,6 +72,7 @@ export default function UploadScreen({
     setZoom(1);
     setRotation(0);
     setCropMode(false);
+    setPriceInput('');
   }
 
   return (
@@ -210,6 +219,7 @@ export default function UploadScreen({
                     onClick={() => {
                       setImage(null);
                       setError(null);
+                      setPriceInput('');
                     }}
                   />
                   <input
@@ -222,11 +232,38 @@ export default function UploadScreen({
                 </div>
               </GlassCard>
 
-              <div className="mt-8 flex justify-center">
+              <div className="mt-6 max-w-sm mx-auto">
+                <label htmlFor="asset-price" className="flex items-center gap-1.5 text-sm text-white/60 mb-2">
+                  <Tag size={14} />
+                  Current price <span className="text-white/30">(optional, for accurate targets)</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none">
+                    $
+                  </span>
+                  <input
+                    id="asset-price"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    value={priceInput}
+                    onChange={(e) => setPriceInput(e.target.value)}
+                    placeholder="e.g. 182.50"
+                    className="w-full glass rounded-xl pl-8 pr-4 py-3 text-sm outline-none focus:border-blue-400/50 placeholder:text-white/30"
+                  />
+                </div>
+                <p className="text-xs text-white/35 mt-2 text-center">
+                  Enter the asset's price at the time of this chart so entry, target and stop levels
+                  are calculated from a real number instead of an estimate.
+                </p>
+              </div>
+
+              <div className="mt-6 flex justify-center">
                 <GlowButton
                   size="lg"
                   icon={<ScanLine size={20} />}
-                  onClick={() => onScan(image)}
+                  onClick={() => onScan(image, parsePrice(priceInput))}
                   className="shadow-[0_0_50px_rgba(59,130,246,0.45)] animate-pulse-glow"
                 >
                   Scan Pattern

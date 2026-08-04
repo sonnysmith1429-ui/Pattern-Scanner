@@ -47,9 +47,9 @@ export default function App() {
     saveWatchlist(watchlist);
   }, [watchlist]);
 
-  function startScan(image: string) {
+  function startScan(image: string, manualPrice?: number) {
     setPendingImage(image);
-    pendingAnalysis.current = analyzeChartImage(image);
+    pendingAnalysis.current = analyzeChartImage(image, manualPrice);
     setScreen('scanning');
   }
 

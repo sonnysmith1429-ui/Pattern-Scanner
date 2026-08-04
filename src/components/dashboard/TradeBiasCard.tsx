@@ -1,4 +1,4 @@
-import { ArrowUpRight, ArrowDownRight, Minus, Target, ShieldAlert } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus, Target, ShieldAlert, CheckCircle2, Wand2 } from 'lucide-react';
 import type { TradeBias } from '../../lib/types';
 import GlassCard from '../ui/GlassCard';
 import Badge from '../ui/Badge';
@@ -9,15 +9,37 @@ const BIAS_STYLE = {
   Neutral: { tone: 'neutral' as const, icon: <Minus size={14} /> },
 };
 
-export default function TradeBiasCard({ bias }: { bias: TradeBias }) {
+export default function TradeBiasCard({
+  bias,
+  currentPrice,
+  priceSource,
+}: {
+  bias: TradeBias;
+  currentPrice: number;
+  priceSource: 'manual' | 'estimated';
+}) {
   const style = BIAS_STYLE[bias.bias];
   return (
     <GlassCard delay={0.2} className="col-span-1 lg:col-span-2">
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-1">
         <h3 className="text-sm font-medium text-white/50">Educational Trade Bias</h3>
         <Badge tone={style.tone} icon={style.icon}>
           {bias.bias} · {bias.confidence}%
         </Badge>
+      </div>
+
+      <div className="mb-4">
+        {priceSource === 'manual' ? (
+          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400">
+            <CheckCircle2 size={12} />
+            Levels calculated from your entered price of ${currentPrice.toFixed(2)}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-xs text-white/35">
+            <Wand2 size={12} />
+            Reference price of ${currentPrice.toFixed(2)} is estimated — enter a real price next scan for accurate levels
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">

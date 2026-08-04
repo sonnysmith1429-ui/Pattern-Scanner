@@ -59,7 +59,7 @@ export default function Dashboard({
         <PatternsCard patterns={result.patterns} />
 
         <IndicatorsCard indicators={result.indicators} />
-        <TradeBiasCard bias={result.tradeBias} />
+        <TradeBiasCard bias={result.tradeBias} currentPrice={result.currentPrice} priceSource={result.priceSource} />
 
         <AIExplanationCard text={result.explanation} />
       </div>

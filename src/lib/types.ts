@@ -56,6 +56,8 @@ export interface ScanResult {
   explanation: string;
   annotations: Annotation[];
   favourite: boolean;
+  currentPrice: number;
+  priceSource: 'manual' | 'estimated';
 }
 
 export interface WatchlistItem {

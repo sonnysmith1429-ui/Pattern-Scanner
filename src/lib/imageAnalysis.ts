@@ -8,10 +8,18 @@ export interface ChartAnalysis {
   support: number;
   resistance: number;
   bullishRatio: number;
+  priceSource: 'manual' | 'estimated';
 }
 
 function rand(min: number, max: number) {
   return Math.random() * (max - min) + min;
+}
+
+function resolvePrice(manualPrice?: number): { price: number; source: 'manual' | 'estimated' } {
+  if (typeof manualPrice === 'number' && Number.isFinite(manualPrice) && manualPrice > 0) {
+    return { price: Math.round(manualPrice * 100) / 100, source: 'manual' };
+  }
+  return { price: Math.round(rand(60, 400) * 100) / 100, source: 'estimated' };
 }
 
 /**
@@ -71,11 +79,11 @@ function priceLevelsFromRows(
   };
 }
 
-function fallbackAnalysis(): ChartAnalysis {
+function fallbackAnalysis(manualPrice?: number): ChartAnalysis {
   const slope = rand(-0.3, 0.3);
   const bullishRatio = Math.max(0, Math.min(1, 0.5 + slope * 0.7 + rand(-0.12, 0.12)));
   const { trend, bias, biasConfidence } = classify(slope, bullishRatio);
-  const currentPrice = Math.round(rand(60, 400) * 100) / 100;
+  const { price: currentPrice, source: priceSource } = resolvePrice(manualPrice);
   const spread = currentPrice * rand(0.08, 0.18);
   return {
     trend,
@@ -85,17 +93,18 @@ function fallbackAnalysis(): ChartAnalysis {
     support: Math.round((currentPrice - spread / 2) * 100) / 100,
     resistance: Math.round((currentPrice + spread / 2) * 100) / 100,
     bullishRatio,
+    priceSource,
   };
 }
 
-function analyzePixels(img: HTMLImageElement): ChartAnalysis {
+function analyzePixels(img: HTMLImageElement, manualPrice?: number): ChartAnalysis {
   const width = 220;
   const height = Math.max(40, Math.min(300, Math.round((img.height / img.width) * width))) || 140;
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return fallbackAnalysis();
+  if (!ctx) return fallbackAnalysis(manualPrice);
   ctx.drawImage(img, 0, 0, width, height);
   const { data } = ctx.getImageData(0, 0, width, height);
 
@@ -137,7 +146,7 @@ function analyzePixels(img: HTMLImageElement): ChartAnalysis {
   for (let x = 0; x < width; x++) if (colTop[x] !== -1) activeCols.push(x);
 
   if (activeCols.length < 8 || greenCount + redCount < 40) {
-    return fallbackAnalysis();
+    return fallbackAnalysis(manualPrice);
   }
 
   const topRow = Math.min(...activeCols.map((x) => colTop[x]));
@@ -154,7 +163,7 @@ function analyzePixels(img: HTMLImageElement): ChartAnalysis {
   const bullishRatio = greenCount / (greenCount + redCount);
 
   const { trend, bias, biasConfidence } = classify(slope, bullishRatio);
-  const currentPrice = Math.round(rand(60, 400) * 100) / 100;
+  const { price: currentPrice, source: priceSource } = resolvePrice(manualPrice);
   const { support, resistance } = priceLevelsFromRows(
     currentPrice,
     topRow,
@@ -163,20 +172,26 @@ function analyzePixels(img: HTMLImageElement): ChartAnalysis {
     Math.max(bottomRow - topRow, height * 0.12),
   );
 
-  return { trend, bias, biasConfidence, currentPrice, support, resistance, bullishRatio };
+  return { trend, bias, biasConfidence, currentPrice, support, resistance, bullishRatio, priceSource };
 }
 
-export function analyzeChartImage(dataUrl: string): Promise<ChartAnalysis> {
+/**
+ * Analyzes an uploaded chart image to derive trend, bias, and price levels.
+ * If `manualPrice` is provided (the asset's real price at the time of the
+ * chart), support/resistance/entry/target levels are anchored to that real
+ * number instead of an estimated placeholder.
+ */
+export function analyzeChartImage(dataUrl: string, manualPrice?: number): Promise<ChartAnalysis> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
       try {
-        resolve(analyzePixels(img));
+        resolve(analyzePixels(img, manualPrice));
       } catch {
-        resolve(fallbackAnalysis());
+        resolve(fallbackAnalysis(manualPrice));
       }
     };
-    img.onerror = () => resolve(fallbackAnalysis());
+    img.onerror = () => resolve(fallbackAnalysis(manualPrice));
     img.src = dataUrl;
   });
 }
