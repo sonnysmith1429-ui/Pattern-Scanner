@@ -6,9 +6,12 @@
  * screen that renders this data must show a DEMO DATA badge — see
  * useFplData's `freshness.source === 'mock'` flag.
  *
- * Player names, clubs-as-fiction-vehicles and stats here are entirely
- * synthetic (seeded RNG, not real fixtures/results) so they are never
- * mistaken for — or misattributed to — real people's performances.
+ * Player and club names are real (so screenshot OCR has something genuine
+ * to match against) but every statistic — price, points, form, fixtures,
+ * results, injury status — is procedurally generated (seeded RNG) and is
+ * never real. The DEMO DATA badge shown everywhere this dataset is used
+ * makes that split explicit, and injury/news text is itself labelled as
+ * simulated so it's never mistaken for a real report about a real player.
  */
 import type {
   Player,
@@ -34,25 +37,9 @@ function mulberry32(seed: number) {
 }
 
 type Rng = () => number;
-const pick = <T,>(rng: Rng, arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
 const int = (rng: Rng, min: number, max: number) => Math.floor(rng() * (max - min + 1)) + min;
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
-
-const FIRST_NAMES = [
-  'James', 'Luca', 'Mateo', 'Kwame', 'Erik', 'Rafael', 'Divock', 'Noah', 'Bruno', 'Kai',
-  'Theo', 'Marcus', 'Diego', 'Femi', 'Anton', 'Lucas', 'Idris', 'Oskar', 'Rio', 'Nathan',
-  'Amir', 'Cesar', 'Finn', 'Kofi', 'Milan', 'Owen', 'Pape', 'Rowan', 'Sven', 'Tariq',
-  'Hugo', 'Elias', 'Jamal', 'Leon', 'Mikael', 'Nico', 'Otis', 'Pedro', 'Quinn', 'Reece',
-  'Samir', 'Tomas', 'Umar', 'Victor', 'Wesley', 'Xavi', 'Yusuf', 'Zach', 'Aaron', 'Bilal',
-];
-const LAST_NAMES = [
-  'Carter', 'Rossi', 'Silva', 'Boateng', 'Johansson', 'Costa', 'Osei', 'Fletcher', 'Adeyemi', 'Novak',
-  'Ferreira', 'Nilsson', 'Barrett', 'Mensah', 'Kowalski', 'Duarte', 'Larsen', 'Whitfield', 'Traore', 'Hughes',
-  'Almeida', 'Berg', 'Odukoya', 'Sinclair', 'Marchetti', 'Holt', 'Diallo', 'Pearson', 'Vukovic', 'Sandberg',
-  'Okafor', 'Bergstrom', 'Cardoso', 'Delgado', 'Ekwueme', 'Falk', 'Grafton', 'Halvorsen', 'Idowu', 'Jansen',
-  'Kellerman', 'Lindqvist', 'Moreau', 'Nkomo', 'Ostrowski', 'Petrov', 'Quesada', 'Rahman', 'Solberg', 'Tavares',
-];
 
 interface ClubSeed {
   id: number;
@@ -61,28 +48,168 @@ interface ClubSeed {
   tier: number; // 1 (weakest) - 5 (strongest) — drives fixture difficulty & player quality
 }
 
+/**
+ * Real, recognisable Premier League club and player names, so that OCR
+ * matching against an uploaded screenshot actually has something real to
+ * find — a purely fictional name pool means every upload fails to match
+ * anything. Everything numeric (price, points, form, injuries, fixtures,
+ * results) is still procedurally generated and is never real; the
+ * DEMO DATA badge shown everywhere this dataset is used makes that
+ * distinction explicit. Rosters reflect recent squads from this app's
+ * training data, not a live transfer feed, so treat exact club/position
+ * assignments as illustrative rather than currently accurate.
+ */
 const CLUBS: ClubSeed[] = [
-  { id: 1, name: 'Northgate City', shortName: 'NGC', tier: 5 },
-  { id: 2, name: 'Ashford Rovers', shortName: 'ASH', tier: 5 },
-  { id: 3, name: 'Merport United', shortName: 'MER', tier: 5 },
-  { id: 4, name: 'Castlevale', shortName: 'CVL', tier: 4 },
-  { id: 5, name: 'Redbrook Town', shortName: 'RBT', tier: 4 },
-  { id: 6, name: 'Kingsmill Athletic', shortName: 'KMA', tier: 4 },
-  { id: 7, name: 'Fernhill', shortName: 'FRN', tier: 4 },
-  { id: 8, name: 'Highburn', shortName: 'HBN', tier: 3 },
-  { id: 9, name: 'Sandport', shortName: 'SND', tier: 3 },
-  { id: 10, name: 'Wexmoor', shortName: 'WEX', tier: 3 },
-  { id: 11, name: 'Crownfield', shortName: 'CRF', tier: 3 },
-  { id: 12, name: 'Dalewich', shortName: 'DLW', tier: 3 },
-  { id: 13, name: 'Brackenside', shortName: 'BRK', tier: 3 },
-  { id: 14, name: 'Oldmarsh', shortName: 'OLM', tier: 3 },
-  { id: 15, name: 'Portleigh', shortName: 'PTL', tier: 2 },
-  { id: 16, name: 'Thornbury Vale', shortName: 'THV', tier: 2 },
-  { id: 17, name: 'Greymoor', shortName: 'GRM', tier: 2 },
-  { id: 18, name: 'Elmswick', shortName: 'ELM', tier: 1 },
-  { id: 19, name: 'Stanmere', shortName: 'STM', tier: 1 },
-  { id: 20, name: 'Woldgate', shortName: 'WLG', tier: 1 },
+  { id: 1, name: 'Arsenal', shortName: 'ARS', tier: 5 },
+  { id: 2, name: 'Manchester City', shortName: 'MCI', tier: 5 },
+  { id: 3, name: 'Liverpool', shortName: 'LIV', tier: 5 },
+  { id: 4, name: 'Chelsea', shortName: 'CHE', tier: 4 },
+  { id: 5, name: 'Manchester United', shortName: 'MUN', tier: 4 },
+  { id: 6, name: 'Newcastle United', shortName: 'NEW', tier: 4 },
+  { id: 7, name: 'Tottenham Hotspur', shortName: 'TOT', tier: 4 },
+  { id: 8, name: 'Aston Villa', shortName: 'AVL', tier: 4 },
+  { id: 9, name: 'Brighton & Hove Albion', shortName: 'BHA', tier: 3 },
+  { id: 10, name: 'Crystal Palace', shortName: 'CRY', tier: 3 },
+  { id: 11, name: 'Brentford', shortName: 'BRE', tier: 3 },
+  { id: 12, name: 'West Ham United', shortName: 'WHU', tier: 3 },
+  { id: 13, name: 'Fulham', shortName: 'FUL', tier: 2 },
+  { id: 14, name: 'Everton', shortName: 'EVE', tier: 2 },
+  { id: 15, name: 'Bournemouth', shortName: 'BOU', tier: 2 },
+  { id: 16, name: 'Nottingham Forest', shortName: 'NFO', tier: 2 },
+  { id: 17, name: 'Wolverhampton Wanderers', shortName: 'WOL', tier: 2 },
+  { id: 18, name: 'Leicester City', shortName: 'LEI', tier: 1 },
+  { id: 19, name: 'Southampton', shortName: 'SOU', tier: 1 },
+  { id: 20, name: 'Ipswich Town', shortName: 'IPS', tier: 1 },
 ];
+
+interface RosterEntry {
+  first: string;
+  last: string;
+}
+
+/** Ordered to match roleTemplate(): GKP, GKP, DEF x5, MID x5, FWD x3 — first MID/FWD is the "star" slot. */
+const ROSTERS: Record<string, RosterEntry[]> = {
+  ARS: [
+    { first: 'David', last: 'Raya' }, { first: 'Aaron', last: 'Ramsdale' },
+    { first: 'William', last: 'Saliba' }, { first: 'Gabriel', last: 'Magalhaes' }, { first: 'Ben', last: 'White' }, { first: 'Jurrien', last: 'Timber' }, { first: 'Oleksandr', last: 'Zinchenko' },
+    { first: 'Martin', last: 'Odegaard' }, { first: 'Declan', last: 'Rice' }, { first: 'Bukayo', last: 'Saka' }, { first: 'Gabriel', last: 'Martinelli' }, { first: 'Mikel', last: 'Merino' },
+    { first: 'Kai', last: 'Havertz' }, { first: 'Gabriel', last: 'Jesus' }, { first: 'Leandro', last: 'Trossard' },
+  ],
+  MCI: [
+    { first: 'Ederson', last: 'Moraes' }, { first: 'Stefan', last: 'Ortega' },
+    { first: 'Ruben', last: 'Dias' }, { first: 'John', last: 'Stones' }, { first: 'Kyle', last: 'Walker' }, { first: 'Josko', last: 'Gvardiol' }, { first: 'Nathan', last: 'Ake' },
+    { first: 'Kevin', last: 'De Bruyne' }, { first: 'Bernardo', last: 'Silva' }, { first: 'Rodri', last: 'Hernandez' }, { first: 'Phil', last: 'Foden' }, { first: 'Jack', last: 'Grealish' },
+    { first: 'Erling', last: 'Haaland' }, { first: 'Julian', last: 'Alvarez' }, { first: 'Jeremy', last: 'Doku' },
+  ],
+  LIV: [
+    { first: 'Alisson', last: 'Becker' }, { first: 'Caoimhin', last: 'Kelleher' },
+    { first: 'Virgil', last: 'van Dijk' }, { first: 'Ibrahima', last: 'Konate' }, { first: 'Trent', last: 'Alexander-Arnold' }, { first: 'Andrew', last: 'Robertson' }, { first: 'Joe', last: 'Gomez' },
+    { first: 'Mohamed', last: 'Salah' }, { first: 'Dominik', last: 'Szoboszlai' }, { first: 'Alexis', last: 'Mac Allister' }, { first: 'Curtis', last: 'Jones' }, { first: 'Ryan', last: 'Gravenberch' },
+    { first: 'Darwin', last: 'Nunez' }, { first: 'Diogo', last: 'Jota' }, { first: 'Cody', last: 'Gakpo' },
+  ],
+  CHE: [
+    { first: 'Robert', last: 'Sanchez' }, { first: 'Djordje', last: 'Petrovic' },
+    { first: 'Levi', last: 'Colwill' }, { first: 'Wesley', last: 'Fofana' }, { first: 'Reece', last: 'James' }, { first: 'Marc', last: 'Cucurella' }, { first: 'Axel', last: 'Disasi' },
+    { first: 'Cole', last: 'Palmer' }, { first: 'Enzo', last: 'Fernandez' }, { first: 'Moises', last: 'Caicedo' }, { first: 'Conor', last: 'Gallagher' }, { first: 'Christopher', last: 'Nkunku' },
+    { first: 'Nicolas', last: 'Jackson' }, { first: 'Mykhailo', last: 'Mudryk' }, { first: 'Armando', last: 'Broja' },
+  ],
+  MUN: [
+    { first: 'Andre', last: 'Onana' }, { first: 'Altay', last: 'Bayindir' },
+    { first: 'Lisandro', last: 'Martinez' }, { first: 'Raphael', last: 'Varane' }, { first: 'Diogo', last: 'Dalot' }, { first: 'Luke', last: 'Shaw' }, { first: 'Harry', last: 'Maguire' },
+    { first: 'Bruno', last: 'Fernandes' }, { first: 'Casemiro', last: 'Silva' }, { first: 'Mason', last: 'Mount' }, { first: 'Christian', last: 'Eriksen' }, { first: 'Kobbie', last: 'Mainoo' },
+    { first: 'Rasmus', last: 'Hojlund' }, { first: 'Marcus', last: 'Rashford' }, { first: 'Antony', last: 'Santos' },
+  ],
+  NEW: [
+    { first: 'Nick', last: 'Pope' }, { first: 'Martin', last: 'Dubravka' },
+    { first: 'Sven', last: 'Botman' }, { first: 'Fabian', last: 'Schar' }, { first: 'Kieran', last: 'Trippier' }, { first: 'Dan', last: 'Burn' }, { first: 'Tino', last: 'Livramento' },
+    { first: 'Bruno', last: 'Guimaraes' }, { first: 'Joelinton', last: 'Cassio' }, { first: 'Sean', last: 'Longstaff' }, { first: 'Miguel', last: 'Almiron' }, { first: 'Sandro', last: 'Tonali' },
+    { first: 'Alexander', last: 'Isak' }, { first: 'Callum', last: 'Wilson' }, { first: 'Anthony', last: 'Gordon' },
+  ],
+  TOT: [
+    { first: 'Guglielmo', last: 'Vicario' }, { first: 'Fraser', last: 'Forster' },
+    { first: 'Cristian', last: 'Romero' }, { first: 'Micky', last: 'van de Ven' }, { first: 'Pedro', last: 'Porro' }, { first: 'Destiny', last: 'Udogie' }, { first: 'Ben', last: 'Davies' },
+    { first: 'James', last: 'Maddison' }, { first: 'Yves', last: 'Bissouma' }, { first: 'Pape Matar', last: 'Sarr' }, { first: 'Rodrigo', last: 'Bentancur' }, { first: 'Giovani', last: 'Lo Celso' },
+    { first: 'Son', last: 'Heung-min' }, { first: 'Dominic', last: 'Solanke' }, { first: 'Richarlison', last: 'Andrade' },
+  ],
+  AVL: [
+    { first: 'Emiliano', last: 'Martinez' }, { first: 'Robin', last: 'Olsen' },
+    { first: 'Ezri', last: 'Konsa' }, { first: 'Pau', last: 'Torres' }, { first: 'Lucas', last: 'Digne' }, { first: 'Matty', last: 'Cash' }, { first: 'Diego', last: 'Carlos' },
+    { first: 'Morgan', last: 'Rogers' }, { first: 'John', last: 'McGinn' }, { first: 'Leon', last: 'Bailey' }, { first: 'Boubacar', last: 'Kamara' }, { first: 'Jacob', last: 'Ramsey' },
+    { first: 'Ollie', last: 'Watkins' }, { first: 'Jhon', last: 'Duran' }, { first: 'Cameron', last: 'Archer' },
+  ],
+  BHA: [
+    { first: 'Bart', last: 'Verbruggen' }, { first: 'Jason', last: 'Steele' },
+    { first: 'Lewis', last: 'Dunk' }, { first: 'Adam', last: 'Webster' }, { first: 'Pervis', last: 'Estupinan' }, { first: 'Jan Paul', last: 'van Hecke' }, { first: 'Tariq', last: 'Lamptey' },
+    { first: 'Kaoru', last: 'Mitoma' }, { first: 'Pascal', last: 'Gross' }, { first: 'Billy', last: 'Gilmour' }, { first: 'Facundo', last: 'Buonanotte' }, { first: 'Julio', last: 'Enciso' },
+    { first: 'Danny', last: 'Welbeck' }, { first: 'Joao', last: 'Pedro' }, { first: 'Evan', last: 'Ferguson' },
+  ],
+  CRY: [
+    { first: 'Dean', last: 'Henderson' }, { first: 'Sam', last: 'Johnstone' },
+    { first: 'Marc', last: 'Guehi' }, { first: 'Joachim', last: 'Andersen' }, { first: 'Tyrick', last: 'Mitchell' }, { first: 'Daniel', last: 'Munoz' }, { first: 'Nathaniel', last: 'Clyne' },
+    { first: 'Eberechi', last: 'Eze' }, { first: 'Adam', last: 'Wharton' }, { first: 'Jefferson', last: 'Lerma' }, { first: 'Will', last: 'Hughes' }, { first: 'Cheick', last: 'Doucoure' },
+    { first: 'Jean-Philippe', last: 'Mateta' }, { first: 'Odsonne', last: 'Edouard' }, { first: 'Eddie', last: 'Nketiah' },
+  ],
+  BRE: [
+    { first: 'Mark', last: 'Flekken' }, { first: 'Thomas', last: 'Strakosha' },
+    { first: 'Ethan', last: 'Pinnock' }, { first: 'Nathan', last: 'Collins' }, { first: 'Rico', last: 'Henry' }, { first: 'Ben', last: 'Mee' }, { first: 'Kristoffer', last: 'Ajer' },
+    { first: 'Mikkel', last: 'Damsgaard' }, { first: 'Vitaly', last: 'Janelt' }, { first: 'Mathias', last: 'Jensen' }, { first: 'Yehor', last: 'Yarmoliuk' }, { first: 'Frank', last: 'Onyeka' },
+    { first: 'Bryan', last: 'Mbeumo' }, { first: 'Yoane', last: 'Wissa' }, { first: 'Kevin', last: 'Schade' },
+  ],
+  WHU: [
+    { first: 'Alphonse', last: 'Areola' }, { first: 'Lukasz', last: 'Fabianski' },
+    { first: 'Kurt', last: 'Zouma' }, { first: 'Nayef', last: 'Aguerd' }, { first: 'Vladimir', last: 'Coufal' }, { first: 'Emerson', last: 'Palmieri' }, { first: 'Aaron', last: 'Cresswell' },
+    { first: 'Lucas', last: 'Paqueta' }, { first: 'James', last: 'Ward-Prowse' }, { first: 'Tomas', last: 'Soucek' }, { first: 'Edson', last: 'Alvarez' }, { first: 'Mohammed', last: 'Kudus' },
+    { first: 'Jarrod', last: 'Bowen' }, { first: 'Michail', last: 'Antonio' }, { first: 'Danny', last: 'Ings' },
+  ],
+  FUL: [
+    { first: 'Bernd', last: 'Leno' }, { first: 'Marek', last: 'Rodak' },
+    { first: 'Calvin', last: 'Bassey' }, { first: 'Issa', last: 'Diop' }, { first: 'Antonee', last: 'Robinson' }, { first: 'Kenny', last: 'Tete' }, { first: 'Timothy', last: 'Castagne' },
+    { first: 'Andreas', last: 'Pereira' }, { first: 'Sasa', last: 'Lukic' }, { first: 'Harrison', last: 'Reed' }, { first: 'Tom', last: 'Cairney' }, { first: 'Alex', last: 'Iwobi' },
+    { first: 'Raul', last: 'Jimenez' }, { first: 'Rodrigo', last: 'Muniz' }, { first: 'Adama', last: 'Traore' },
+  ],
+  EVE: [
+    { first: 'Jordan', last: 'Pickford' }, { first: 'Joao', last: 'Virginia' },
+    { first: 'Jarrad', last: 'Branthwaite' }, { first: 'James', last: 'Tarkowski' }, { first: 'Vitaliy', last: 'Mykolenko' }, { first: 'Ashley', last: 'Young' }, { first: 'Nathan', last: 'Patterson' },
+    { first: 'Idrissa', last: 'Gueye' }, { first: 'Abdoulaye', last: 'Doucoure' }, { first: 'Dwight', last: 'McNeil' }, { first: 'James', last: 'Garner' }, { first: 'Iliman', last: 'Ndiaye' },
+    { first: 'Dominic', last: 'Calvert-Lewin' }, { first: 'Beto', last: 'Betuncal' }, { first: 'Youssef', last: 'Chermiti' },
+  ],
+  BOU: [
+    { first: 'Neto', last: 'Murara' }, { first: 'Mark', last: 'Travers' },
+    { first: 'Illia', last: 'Zabarnyi' }, { first: 'Marcos', last: 'Senesi' }, { first: 'Adam', last: 'Smith' }, { first: 'Milos', last: 'Kerkez' }, { first: 'James', last: 'Hill' },
+    { first: 'Ryan', last: 'Christie' }, { first: 'Philip', last: 'Billing' }, { first: 'David', last: 'Brooks' }, { first: 'Marcus', last: 'Tavernier' }, { first: 'Alex', last: 'Scott' },
+    { first: 'Antoine', last: 'Semenyo' }, { first: 'Justin', last: 'Kluivert' }, { first: 'Enes', last: 'Unal' },
+  ],
+  NFO: [
+    { first: 'Matz', last: 'Sels' }, { first: 'Wayne', last: 'Hennessey' },
+    { first: 'Murillo', last: 'Santos' }, { first: 'Willy', last: 'Boly' }, { first: 'Ola', last: 'Aina' }, { first: 'Neco', last: 'Williams' }, { first: 'Andrew', last: 'Omobamidele' },
+    { first: 'Morgan', last: 'Gibbs-White' }, { first: 'Ryan', last: 'Yates' }, { first: 'Danilo', last: 'dos Santos' }, { first: 'Nicolas', last: 'Dominguez' }, { first: 'Callum', last: 'Hudson-Odoi' },
+    { first: 'Chris', last: 'Wood' }, { first: 'Taiwo', last: 'Awoniyi' }, { first: 'Anthony', last: 'Elanga' },
+  ],
+  WOL: [
+    { first: 'Jose', last: 'Sa' }, { first: 'Daniel', last: 'Bentley' },
+    { first: 'Toti', last: 'Gomes' }, { first: 'Craig', last: 'Dawson' }, { first: 'Rayan', last: 'Ait-Nouri' }, { first: 'Nelson', last: 'Semedo' }, { first: 'Santiago', last: 'Bueno' },
+    { first: 'Mario', last: 'Lemina' }, { first: 'Joao', last: 'Gomes' }, { first: 'Pablo', last: 'Sarabia' }, { first: 'Boubacar', last: 'Traore' }, { first: 'Jean-Ricner', last: 'Bellegarde' },
+    { first: 'Matheus', last: 'Cunha' }, { first: 'Hwang', last: 'Hee-chan' }, { first: 'Pedro', last: 'Neto' },
+  ],
+  LEI: [
+    { first: 'Mads', last: 'Hermansen' }, { first: 'Danny', last: 'Ward' },
+    { first: 'Wout', last: 'Faes' }, { first: 'Jannik', last: 'Vestergaard' }, { first: 'Ricardo', last: 'Pereira' }, { first: 'Victor', last: 'Kristiansen' }, { first: 'James', last: 'Justin' },
+    { first: 'Youri', last: 'Tielemans' }, { first: 'Kiernan', last: 'Dewsbury-Hall' }, { first: 'Wilfred', last: 'Ndidi' }, { first: 'Harry', last: 'Winks' }, { first: 'Bobby', last: 'Decordova-Reid' },
+    { first: 'Jamie', last: 'Vardy' }, { first: 'Patson', last: 'Daka' }, { first: 'Abdul', last: 'Fatawu' },
+  ],
+  SOU: [
+    { first: 'Alex', last: 'McCarthy' }, { first: 'Gavin', last: 'Bazunu' },
+    { first: 'Jan', last: 'Bednarek' }, { first: 'Taylor', last: 'Harwood-Bellis' }, { first: 'Kyle', last: 'Walker-Peters' }, { first: 'Ryan', last: 'Manning' }, { first: 'Jack', last: 'Stephens' },
+    { first: 'Will', last: 'Smallbone' }, { first: 'Flynn', last: 'Downes' }, { first: 'Joe', last: 'Rothwell' }, { first: 'Mateus', last: 'Fernandes' }, { first: 'Shea', last: 'Charles' },
+    { first: 'Adam', last: 'Armstrong' }, { first: 'Ross', last: 'Stewart' }, { first: 'Paul', last: 'Onuachu' },
+  ],
+  IPS: [
+    { first: 'Arijanet', last: 'Muric' }, { first: 'Christian', last: 'Walton' },
+    { first: 'Axel', last: 'Tuanzebe' }, { first: 'Cameron', last: 'Burgess' }, { first: 'Leif', last: 'Davis' }, { first: 'Jacob', last: 'Greaves' }, { first: 'Harry', last: 'Clarke' },
+    { first: 'Sammie', last: 'Szmodics' }, { first: 'Massimo', last: 'Luongo' }, { first: 'Jack', last: 'Taylor' }, { first: 'Kalvin', last: 'Phillips' }, { first: 'Jens', last: 'Cajuste' },
+    { first: 'Liam', last: 'Delap' }, { first: 'George', last: 'Hirst' }, { first: 'Conor', last: 'Chaplin' },
+  ],
+};
 
 export const CURRENT_GAMEWEEK = 4;
 const TOTAL_GAMEWEEKS = 38;
@@ -313,20 +440,17 @@ export function getMockBundle(): MockBundle {
   const playerHistory = new Map<number, PlayerGameweekHistory[]>();
   let nextId = 1;
   let injuredAssigned = false;
-  const usedNames = new Set<string>();
 
   for (const club of CLUBS) {
     const roles = roleTemplate(club.tier);
-    for (const roleSeed of roles) {
+    const roster = ROSTERS[club.shortName] ?? [];
+    for (let roleIndex = 0; roleIndex < roles.length; roleIndex++) {
+      const roleSeed = roles[roleIndex];
       const id = nextId++;
       const code = 300000 + id;
-      let firstName = pick(rng, FIRST_NAMES);
-      let secondName = pick(rng, LAST_NAMES);
-      for (let attempt = 0; attempt < 20 && usedNames.has(`${firstName}|${secondName}`); attempt++) {
-        firstName = pick(rng, FIRST_NAMES);
-        secondName = pick(rng, LAST_NAMES);
-      }
-      usedNames.add(`${firstName}|${secondName}`);
+      const rosterEntry = roster[roleIndex];
+      const firstName = rosterEntry?.first ?? 'Reserve';
+      const secondName = rosterEntry?.last ?? `Player ${id}`;
       const price = basePrice(roleSeed.position, roleSeed.role, club.tier, rng);
 
       const history: PlayerGameweekHistory[] = [];
@@ -388,12 +512,12 @@ export function getMockBundle(): MockBundle {
       let chanceOfPlayingNextRound: number | null = null;
       if (!injuredAssigned && roleSeed.role === 'starter' && club.tier >= 4 && rng() < 0.5) {
         status = 'd';
-        news = 'Knock picked up in training, assessed ahead of next fixture.';
+        news = 'Simulated demo status (not a real report): minor knock, assessed ahead of next fixture.';
         chanceOfPlayingNextRound = 50;
         injuredAssigned = true;
       } else if (rng() < 0.03) {
         status = 'i';
-        news = 'Expected to be out for several weeks with a muscle injury.';
+        news = 'Simulated demo status (not a real report): modelled as out for several weeks with a muscle injury.';
         chanceOfPlayingNextRound = 0;
       }
 

@@ -115,7 +115,7 @@ This is a statistical estimate, not a prediction — every "Projected points" la
 
 ## Demo mode
 
-Click **Try Demo** on the landing page (or the upload screen) at any time. This loads a deterministic, procedurally-generated 300-player dataset and a pre-built squad with real, intentional weaknesses to analyse — labelled `DEMO DATA` everywhere it appears, never presented as live stats.
+Click **Try Demo** on the landing page (or the upload screen) at any time. This loads a deterministic, procedurally-generated 300-player dataset — real player and club names (so screenshot OCR has something genuine to match against), but every statistic (price, points, form, fixtures, injuries) is synthetic — plus a pre-built squad with real, intentional weaknesses to analyse. Labelled `DEMO DATA` everywhere it appears, never presented as live stats; any injury/news text is itself labelled as simulated.
 
 ## Deploying
 
