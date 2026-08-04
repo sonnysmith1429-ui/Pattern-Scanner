@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Gauge, Moon, Sun, Bell, Trash2, Lock, ChevronRight } from 'lucide-react';
+import { Zap, Gauge, Moon, Sun, Bell, Trash2, Lock, ChevronRight, Newspaper, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import type { AppSettings } from '../../lib/types';
 import GlassCard from '../ui/GlassCard';
 import GlowButton from '../ui/GlowButton';
@@ -62,6 +62,7 @@ export default function Settings({
 }) {
   const [confirmClear, setConfirmClear] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showKey, setShowKey] = useState(false);
 
   return (
     <div className="px-4 sm:px-6 py-8 sm:py-12 max-w-2xl mx-auto">
@@ -96,6 +97,52 @@ export default function Settings({
             <p className="text-xs text-white/40 mt-0.5">Deeper scan, full indicator suite</p>
           </button>
         </div>
+      </GlassCard>
+
+      <GlassCard hover={false} className="mb-5">
+        <div className="flex items-center gap-2 mb-1">
+          <Newspaper size={16} className="text-blue-400" />
+          <h2 className="text-sm font-medium text-white/50">News Integration</h2>
+          {settings.newsApiKey && (
+            <span className="flex items-center gap-1 text-[11px] text-emerald-400 ml-auto">
+              <CheckCircle2 size={12} /> Connected
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-white/35 mb-4">
+          Add a free Alpha Vantage API key so scans can factor in recent news sentiment for the
+          ticker you enter, alongside the chart itself.
+        </p>
+        <div className="relative">
+          <input
+            type={showKey ? 'text' : 'password'}
+            value={settings.newsApiKey}
+            onChange={(e) => onChange({ newsApiKey: e.target.value.trim() })}
+            placeholder="Paste your API key"
+            className="w-full glass rounded-xl pl-4 pr-11 py-2.5 text-sm outline-none focus:border-blue-400/50 placeholder:text-white/30"
+          />
+          <button
+            onClick={() => setShowKey((s) => !s)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white cursor-pointer"
+            title={showKey ? 'Hide key' : 'Show key'}
+            type="button"
+          >
+            {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        </div>
+        <a
+          href="https://www.alphavantage.co/support/#api-key"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-block text-xs text-blue-400 hover:text-blue-300 transition-colors mt-2"
+        >
+          Get a free API key at alphavantage.co →
+        </a>
+        <p className="text-[11px] text-white/30 mt-2 leading-relaxed">
+          Stored only in this browser. News fetching runs directly from your device to Alpha
+          Vantage, so it works once this app is deployed to your own domain — it won't run inside
+          a Claude Artifact preview, which blocks outside network requests.
+        </p>
       </GlassCard>
 
       <GlassCard hover={false} className="mb-5">

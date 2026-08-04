@@ -43,6 +43,24 @@ export interface Annotation {
   points: { x: number; y: number }[];
 }
 
+export type NewsSentiment = 'Bullish' | 'Somewhat-Bullish' | 'Neutral' | 'Somewhat-Bearish' | 'Bearish';
+
+export interface NewsArticle {
+  title: string;
+  source: string;
+  url: string;
+  publishedAt: string;
+  sentiment: NewsSentiment;
+  sentimentScore: number;
+}
+
+export interface NewsSignal {
+  ticker: string;
+  articles: NewsArticle[];
+  averageSentiment: number;
+  fetchedAt: string;
+}
+
 export interface ScanResult {
   id: string;
   createdAt: string;
@@ -58,6 +76,7 @@ export interface ScanResult {
   favourite: boolean;
   currentPrice: number;
   priceSource: 'manual' | 'estimated';
+  news: NewsSignal | null;
 }
 
 export interface WatchlistItem {
@@ -72,4 +91,5 @@ export interface AppSettings {
   scanMode: 'fast' | 'accuracy';
   theme: 'dark' | 'light';
   notifications: boolean;
+  newsApiKey: string;
 }

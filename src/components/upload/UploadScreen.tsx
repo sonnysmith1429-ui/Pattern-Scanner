@@ -12,6 +12,7 @@ import {
   ScanLine,
   AlertCircle,
   Tag,
+  Newspaper,
 } from 'lucide-react';
 import GlowButton from '../ui/GlowButton';
 import GlassCard from '../ui/GlassCard';
@@ -28,9 +29,11 @@ function parsePrice(raw: string): number | undefined {
 export default function UploadScreen({
   onScan,
   onBack,
+  newsEnabled,
 }: {
-  onScan: (image: string, manualPrice?: number) => void;
+  onScan: (image: string, manualPrice?: number, ticker?: string) => void;
   onBack: () => void;
+  newsEnabled: boolean;
 }) {
   const [image, setImage] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -39,6 +42,7 @@ export default function UploadScreen({
   const [rotation, setRotation] = useState(0);
   const [cropMode, setCropMode] = useState(false);
   const [priceInput, setPriceInput] = useState('');
+  const [tickerInput, setTickerInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((file: File | undefined) => {
@@ -56,6 +60,7 @@ export default function UploadScreen({
       setRotation(0);
       setCropMode(false);
       setPriceInput('');
+      setTickerInput('');
     };
     reader.readAsDataURL(file);
   }, []);
@@ -73,6 +78,7 @@ export default function UploadScreen({
     setRotation(0);
     setCropMode(false);
     setPriceInput('');
+    setTickerInput('');
   }
 
   return (
@@ -220,6 +226,7 @@ export default function UploadScreen({
                       setImage(null);
                       setError(null);
                       setPriceInput('');
+                      setTickerInput('');
                     }}
                   />
                   <input
@@ -232,38 +239,58 @@ export default function UploadScreen({
                 </div>
               </GlassCard>
 
-              <div className="mt-6 max-w-sm mx-auto">
-                <label htmlFor="asset-price" className="flex items-center gap-1.5 text-sm text-white/60 mb-2">
-                  <Tag size={14} />
-                  Current price <span className="text-white/30">(optional, for accurate targets)</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none">
-                    $
-                  </span>
+              <div className="mt-6 max-w-md mx-auto grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="asset-price" className="flex items-center gap-1.5 text-sm text-white/60 mb-2">
+                    <Tag size={14} />
+                    Current price <span className="text-white/30">(optional)</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none">
+                      $
+                    </span>
+                    <input
+                      id="asset-price"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      value={priceInput}
+                      onChange={(e) => setPriceInput(e.target.value)}
+                      placeholder="e.g. 182.50"
+                      className="w-full glass rounded-xl pl-8 pr-4 py-3 text-sm outline-none focus:border-blue-400/50 placeholder:text-white/30"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="asset-ticker" className="flex items-center gap-1.5 text-sm text-white/60 mb-2">
+                    <Newspaper size={14} />
+                    Ticker <span className="text-white/30">(optional)</span>
+                  </label>
                   <input
-                    id="asset-price"
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="0.01"
-                    value={priceInput}
-                    onChange={(e) => setPriceInput(e.target.value)}
-                    placeholder="e.g. 182.50"
-                    className="w-full glass rounded-xl pl-8 pr-4 py-3 text-sm outline-none focus:border-blue-400/50 placeholder:text-white/30"
+                    id="asset-ticker"
+                    type="text"
+                    value={tickerInput}
+                    onChange={(e) => setTickerInput(e.target.value.toUpperCase())}
+                    placeholder="e.g. AAPL"
+                    disabled={!newsEnabled}
+                    className="w-full glass rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-400/50 placeholder:text-white/30 disabled:opacity-40 disabled:cursor-not-allowed"
                   />
                 </div>
-                <p className="text-xs text-white/35 mt-2 text-center">
-                  Enter the asset's price at the time of this chart so entry, target and stop levels
-                  are calculated from a real number instead of an estimate.
-                </p>
               </div>
+
+              <p className="text-xs text-white/35 mt-3 text-center max-w-md mx-auto">
+                {newsEnabled
+                  ? "Price makes entry/target/stop levels real instead of estimated. Ticker pulls in recent news sentiment to factor into the bias."
+                  : 'Price makes entry/target/stop levels real instead of estimated. Add a free news API key in Settings to also factor in live news sentiment.'}
+              </p>
 
               <div className="mt-6 flex justify-center">
                 <GlowButton
                   size="lg"
                   icon={<ScanLine size={20} />}
-                  onClick={() => onScan(image, parsePrice(priceInput))}
+                  onClick={() => onScan(image, parsePrice(priceInput), tickerInput.trim() || undefined)}
                   className="shadow-[0_0_50px_rgba(59,130,246,0.45)] animate-pulse-glow"
                 >
                   Scan Pattern

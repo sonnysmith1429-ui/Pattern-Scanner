@@ -2,6 +2,7 @@ import type {
   Annotation,
   Bias,
   Indicators,
+  NewsSignal,
   RecognisedPattern,
   ScanResult,
   Trend,
@@ -236,10 +237,44 @@ function article(word: string): string {
   return /^[aeiou]/i.test(word) ? 'an' : 'a';
 }
 
+function newsDirection(news: NewsSignal): Bias {
+  if (news.averageSentiment > 0.15) return 'Bullish';
+  if (news.averageSentiment < -0.15) return 'Bearish';
+  return 'Neutral';
+}
+
+/**
+ * News is treated as a secondary nudge on confidence, never as something
+ * that can flip the technical bias — the chart's own trend/bias pairing is
+ * already guaranteed to agree with itself, and letting a news score
+ * override that would reintroduce the same "uptrend but bearish"
+ * contradiction that pairing was built to prevent.
+ */
+function applyNewsToConfidence(bias: Bias, confidence: number, news: NewsSignal | null): number {
+  if (!news || !news.articles.length) return confidence;
+  const direction = newsDirection(news);
+  if (direction === 'Neutral') return confidence;
+  const nudge = Math.round(Math.min(1, Math.abs(news.averageSentiment)) * 10);
+  return direction === bias ? Math.min(97, confidence + nudge) : Math.max(35, confidence - nudge);
+}
+
+function newsNoteFor(bias: Bias, news: NewsSignal | null): string {
+  if (!news || !news.articles.length) return '';
+  const direction = newsDirection(news);
+  if (direction === 'Neutral') {
+    return ` Recent news sentiment for ${news.ticker} is mixed and doesn't add a clear lean either way.`;
+  }
+  if (direction === bias) {
+    return ` Recent news sentiment for ${news.ticker} also leans ${direction.toLowerCase()}, reinforcing this technical read.`;
+  }
+  return ` Recent news sentiment for ${news.ticker} leans ${direction.toLowerCase()}, which runs counter to this technical read — worth weighing before acting on it.`;
+}
+
 function explanationFor(
   trend: Trend,
   patterns: RecognisedPattern[],
   bias: TradeBias,
+  news: NewsSignal | null,
 ): string {
   const top = patterns[0];
   const second = patterns[1];
@@ -281,19 +316,25 @@ function explanationFor(
     bias.bias === 'Neutral'
       ? ' Overall signals are mixed here, so the technical bias is neutral rather than clearly directional.'
       : ` Overall, the technical bias here is ${bias.bias.toLowerCase()}.`;
+  const newsNote = newsNoteFor(bias.bias, news);
 
-  return `Looking at the uploaded chart, ${primary}${secondary}${biasNote} This analysis is provided for educational purposes only and should not be treated as financial advice.`;
+  return `Looking at the uploaded chart, ${primary}${secondary}${biasNote}${newsNote} This analysis is provided for educational purposes only and should not be treated as financial advice.`;
 }
 
-export function generateScanResult(image: string, analysis: ChartAnalysis): ScanResult {
+export function generateScanResult(
+  image: string,
+  analysis: ChartAnalysis,
+  news: NewsSignal | null = null,
+): ScanResult {
   const { trend, bias, biasConfidence, support, resistance, currentPrice, priceSource } = analysis;
+  const adjustedConfidence = applyNewsToConfidence(bias, biasConfidence, news);
   const patterns = generatePatterns(bias);
   const indicators = generateIndicators(trend, support, resistance, currentPrice);
-  const tradeBias = generateTradeBias(bias, support, resistance, currentPrice, biasConfidence);
+  const tradeBias = generateTradeBias(bias, support, resistance, currentPrice, adjustedConfidence);
   const overallConfidence = Math.round(
     (patterns.reduce((s, p) => s + p.confidence, 0) / patterns.length) * 0.45 +
       tradeBias.confidence * 0.3 +
-      biasConfidence * 0.25,
+      adjustedConfidence * 0.25,
   );
 
   return {
@@ -301,16 +342,17 @@ export function generateScanResult(image: string, analysis: ChartAnalysis): Scan
     createdAt: new Date().toISOString(),
     image,
     trend,
-    trendConfidence: Math.max(55, Math.min(97, biasConfidence + randInt(-3, 6))),
+    trendConfidence: Math.max(55, Math.min(97, adjustedConfidence + randInt(-3, 6))),
     patterns,
     indicators,
     tradeBias,
     overallConfidence: Math.max(30, Math.min(97, overallConfidence)),
-    explanation: explanationFor(trend, patterns, tradeBias),
+    explanation: explanationFor(trend, patterns, tradeBias, news),
     annotations: generateAnnotations(patterns, bias),
     favourite: false,
     currentPrice,
     priceSource,
+    news,
   };
 }
 

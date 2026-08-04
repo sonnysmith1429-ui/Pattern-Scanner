@@ -12,7 +12,8 @@ import Nav, { type Screen } from './components/nav/Nav';
 import Disclaimer from './components/ui/Disclaimer';
 import { generateScanResult, demoChartImage } from './lib/mockData';
 import { analyzeChartImage, type ChartAnalysis } from './lib/imageAnalysis';
-import type { ScanResult, WatchlistItem } from './lib/types';
+import { fetchNewsSignal } from './lib/newsAnalysis';
+import type { NewsSignal, ScanResult, WatchlistItem } from './lib/types';
 import {
   loadHistory,
   saveHistory,
@@ -29,6 +30,7 @@ export default function App() {
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [currentResult, setCurrentResult] = useState<ScanResult | null>(null);
   const pendingAnalysis = useRef<Promise<ChartAnalysis> | null>(null);
+  const pendingNews = useRef<Promise<NewsSignal | null> | null>(null);
 
   const [history, setHistory] = useState<ScanResult[]>(() => loadHistory());
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>(() => loadWatchlist());
@@ -47,16 +49,18 @@ export default function App() {
     saveWatchlist(watchlist);
   }, [watchlist]);
 
-  function startScan(image: string, manualPrice?: number) {
+  function startScan(image: string, manualPrice?: number, ticker?: string) {
     setPendingImage(image);
     pendingAnalysis.current = analyzeChartImage(image, manualPrice);
+    pendingNews.current =
+      ticker && settings.newsApiKey ? fetchNewsSignal(ticker, settings.newsApiKey) : Promise.resolve(null);
     setScreen('scanning');
   }
 
   async function handleScanComplete() {
     if (!pendingImage || !pendingAnalysis.current) return;
-    const analysis = await pendingAnalysis.current;
-    const result = generateScanResult(pendingImage, analysis);
+    const [analysis, news] = await Promise.all([pendingAnalysis.current, pendingNews.current ?? Promise.resolve(null)]);
+    const result = generateScanResult(pendingImage, analysis, news);
     setCurrentResult(result);
     setHistory((h) => [result, ...h]);
     setScreen('dashboard');
@@ -123,7 +127,11 @@ export default function App() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <UploadScreen onBack={() => setScreen('landing')} onScan={startScan} />
+              <UploadScreen
+                onBack={() => setScreen('landing')}
+                onScan={startScan}
+                newsEnabled={!!settings.newsApiKey}
+              />
             </motion.div>
           )}
 

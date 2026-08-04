@@ -16,7 +16,16 @@ function safeParse<T>(raw: string | null, fallback: T): T {
 }
 
 export function loadHistory(): ScanResult[] {
-  return safeParse<ScanResult[]>(localStorage.getItem(KEYS.history), []);
+  const raw = safeParse<Partial<ScanResult>[]>(localStorage.getItem(KEYS.history), []);
+  // Scans saved by an earlier version of the app (before currentPrice/
+  // priceSource/news existed) won't have those fields — normalize so
+  // opening an old scan doesn't crash the dashboard.
+  return raw.map((r) => ({
+    ...r,
+    currentPrice: r.currentPrice ?? 0,
+    priceSource: r.priceSource ?? 'estimated',
+    news: r.news ?? null,
+  })) as ScanResult[];
 }
 
 export function saveHistory(history: ScanResult[]) {
@@ -35,10 +44,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   scanMode: 'accuracy',
   theme: 'dark',
   notifications: true,
+  newsApiKey: '',
 };
 
 export function loadSettings(): AppSettings {
-  return safeParse<AppSettings>(localStorage.getItem(KEYS.settings), DEFAULT_SETTINGS);
+  // Merge with defaults so settings saved before a new field was added
+  // (e.g. newsApiKey) don't come back as undefined.
+  return { ...DEFAULT_SETTINGS, ...safeParse<Partial<AppSettings>>(localStorage.getItem(KEYS.settings), {}) };
 }
 
 export function saveSettings(settings: AppSettings) {

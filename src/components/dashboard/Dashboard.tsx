@@ -8,6 +8,7 @@ import TradeBiasCard from './TradeBiasCard';
 import ChartAnnotationCard from './ChartAnnotationCard';
 import ConfidenceMeterCard from './ConfidenceMeterCard';
 import AIExplanationCard from './AIExplanationCard';
+import NewsCard from './NewsCard';
 import Disclaimer from '../ui/Disclaimer';
 import GlowButton from '../ui/GlowButton';
 
@@ -60,6 +61,8 @@ export default function Dashboard({
 
         <IndicatorsCard indicators={result.indicators} />
         <TradeBiasCard bias={result.tradeBias} currentPrice={result.currentPrice} priceSource={result.priceSource} />
+
+        {result.news && <NewsCard news={result.news} bias={result.tradeBias.bias} />}
 
         <AIExplanationCard text={result.explanation} />
       </div>
