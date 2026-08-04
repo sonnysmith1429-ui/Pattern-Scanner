@@ -2,7 +2,7 @@ import { ShieldAlert } from 'lucide-react';
 import clsx from 'clsx';
 
 export const DISCLAIMER_TEXT =
-  'Pattern Scanner provides AI-assisted technical chart analysis for educational and informational purposes only. Financial markets are inherently uncertain, and no analysis can predict future price movements with certainty. Any trade ideas, target zones, stop-loss examples, or risk assessments shown are illustrative examples rather than recommendations. Users should conduct their own research and consider seeking advice from a qualified financial professional before making investment decisions.';
+  'FPL Analyst AI provides statistical estimates and recommendations for informational purposes. Player performance and projected points are not guaranteed. FPL Analyst AI is an independent project and is not affiliated with, endorsed by, or connected to the Premier League or Fantasy Premier League.';
 
 export default function Disclaimer({ compact = false, className }: { compact?: boolean; className?: string }) {
   return (
@@ -15,9 +15,7 @@ export default function Disclaimer({ compact = false, className }: { compact?: b
     >
       <ShieldAlert className="shrink-0 text-orange-400 mt-0.5" size={compact ? 16 : 20} />
       <p className="leading-relaxed">
-        {compact
-          ? 'Educational technical analysis only — not financial advice. Illustrative examples, not recommendations.'
-          : DISCLAIMER_TEXT}
+        {compact ? 'Statistical estimates only — not guaranteed. Not affiliated with the Premier League or Fantasy Premier League.' : DISCLAIMER_TEXT}
       </p>
     </div>
   );

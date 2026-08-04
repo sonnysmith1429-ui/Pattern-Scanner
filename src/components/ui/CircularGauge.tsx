@@ -1,30 +1,37 @@
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import { scoreTier } from '../../lib/fpl/constants';
 
-function colorFor(value: number) {
-  if (value >= 70) return { stroke: '#10b981', glow: 'rgba(16,185,129,0.45)', text: 'text-emerald-400' };
-  if (value >= 40) return { stroke: '#f59e0b', glow: 'rgba(245,158,11,0.45)', text: 'text-orange-400' };
-  return { stroke: '#ef4444', glow: 'rgba(239,68,68,0.45)', text: 'text-red-400' };
-}
+const TIER_HEX: Record<ReturnType<typeof scoreTier>, { stroke: string; glow: string; text: string }> = {
+  elite: { stroke: '#34d399', glow: 'rgba(52,211,153,0.45)', text: 'text-emerald-400' },
+  strong: { stroke: '#2dd4bf', glow: 'rgba(45,212,191,0.4)', text: 'text-teal-400' },
+  decent: { stroke: '#38bdf8', glow: 'rgba(56,189,248,0.4)', text: 'text-sky-400' },
+  'below-average': { stroke: '#fbbf24', glow: 'rgba(251,191,36,0.4)', text: 'text-amber-400' },
+  poor: { stroke: '#fb7185', glow: 'rgba(251,113,133,0.4)', text: 'text-rose-400' },
+};
 
 export default function CircularGauge({
   value,
   size = 200,
   strokeWidth = 14,
   label,
+  suffix = '',
+  max = 100,
 }: {
   value: number;
   size?: number;
   strokeWidth?: number;
   label?: string;
+  suffix?: string;
+  max?: number;
 }) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const [display, setDisplay] = useState(0);
   const mv = useMotionValue(0);
-  const { stroke, glow, text } = colorFor(value);
+  const { stroke, glow, text } = TIER_HEX[scoreTier(value)];
 
-  const strokeDashoffset = useTransform(mv, (v) => circumference - (v / 100) * circumference);
+  const strokeDashoffset = useTransform(mv, (v) => circumference - (v / max) * circumference);
 
   useEffect(() => {
     const controls = animate(mv, value, {
@@ -38,19 +45,9 @@ export default function CircularGauge({
 
   return (
     <div className="relative flex flex-col items-center justify-center" style={{ width: size, height: size }}>
-      <div
-        className="absolute inset-4 rounded-full"
-        style={{ boxShadow: `0 0 60px 10px ${glow}`, opacity: 0.5 }}
-      />
+      <div className="absolute inset-4 rounded-full" style={{ boxShadow: `0 0 60px 10px ${glow}`, opacity: 0.5 }} />
       <svg width={size} height={size} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          className="gauge-track"
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
+        <circle cx={size / 2} cy={size / 2} r={radius} className="gauge-track" strokeWidth={strokeWidth} fill="none" />
         <motion.circle
           cx={size / 2}
           cy={size / 2}
@@ -64,7 +61,11 @@ export default function CircularGauge({
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className={`text-4xl font-semibold tabular-nums ${text}`}>{display}%</span>
+        <span className={`text-4xl font-semibold tabular-nums ${text}`}>
+          {display}
+          {suffix}
+        </span>
+        {max !== 100 || suffix === '' ? null : <span className="text-xs text-white/40 -mt-0.5">/ {max}</span>}
         {label && <span className="text-xs text-white/50 mt-1">{label}</span>}
       </div>
     </div>

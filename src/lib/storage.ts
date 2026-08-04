@@ -1,9 +1,9 @@
-import type { AppSettings, ScanResult, WatchlistItem } from './types';
+import type { AppSettings, SavedAnalysis, UserContext } from '../types';
 
 const KEYS = {
-  history: 'ps_history',
-  watchlist: 'ps_watchlist',
-  settings: 'ps_settings',
+  history: 'fpl_analyst_history_v1',
+  settings: 'fpl_analyst_settings_v1',
+  context: 'fpl_analyst_context_v1',
 };
 
 function safeParse<T>(raw: string | null, fallback: T): T {
@@ -15,27 +15,19 @@ function safeParse<T>(raw: string | null, fallback: T): T {
   }
 }
 
-export function loadHistory(): ScanResult[] {
-  return safeParse<ScanResult[]>(localStorage.getItem(KEYS.history), []);
+export function loadHistory(): SavedAnalysis[] {
+  return safeParse<SavedAnalysis[]>(localStorage.getItem(KEYS.history), []);
 }
 
-export function saveHistory(history: ScanResult[]) {
-  localStorage.setItem(KEYS.history, JSON.stringify(history));
+export function saveHistory(history: SavedAnalysis[]) {
+  try {
+    localStorage.setItem(KEYS.history, JSON.stringify(history));
+  } catch {
+    // storage full — non-fatal, history just won't persist across reloads
+  }
 }
 
-export function loadWatchlist(): WatchlistItem[] {
-  return safeParse<WatchlistItem[]>(localStorage.getItem(KEYS.watchlist), []);
-}
-
-export function saveWatchlist(items: WatchlistItem[]) {
-  localStorage.setItem(KEYS.watchlist, JSON.stringify(items));
-}
-
-export const DEFAULT_SETTINGS: AppSettings = {
-  scanMode: 'accuracy',
-  theme: 'dark',
-  notifications: true,
-};
+export const DEFAULT_SETTINGS: AppSettings = { theme: 'dark' };
 
 export function loadSettings(): AppSettings {
   return safeParse<AppSettings>(localStorage.getItem(KEYS.settings), DEFAULT_SETTINGS);
@@ -43,4 +35,14 @@ export function loadSettings(): AppSettings {
 
 export function saveSettings(settings: AppSettings) {
   localStorage.setItem(KEYS.settings, JSON.stringify(settings));
+}
+
+export const DEFAULT_CONTEXT: UserContext = { bank: null, freeTransfers: null, wildcardActive: false };
+
+export function loadContext(): UserContext {
+  return safeParse<UserContext>(localStorage.getItem(KEYS.context), DEFAULT_CONTEXT);
+}
+
+export function saveContext(context: UserContext) {
+  localStorage.setItem(KEYS.context, JSON.stringify(context));
 }
