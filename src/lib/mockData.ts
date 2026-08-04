@@ -144,25 +144,29 @@ function generateTradeBias(
   currentPrice: number,
   confidence: number,
 ): TradeBias {
-  const spread = Math.max(resistance - support, currentPrice * 0.04);
+  // This app targets intraday setups, so the whole band stays within a
+  // realistic same-day move — a small floor keeps flat charts from
+  // collapsing to a zero-width band, not from ballooning into swing-trade
+  // territory the way a percent-of-price floor would.
+  const spread = Math.max(resistance - support, currentPrice * 0.008);
   let entry: number;
   let takeProfit: number;
   let stopLoss: number;
 
   if (bias === 'Bullish') {
-    // Buy near support, target above resistance, protect below support.
+    // Buy near support, target just past resistance, protect below support.
     entry = support + spread * 0.15;
-    takeProfit = resistance + spread * 0.35;
-    stopLoss = support - spread * 0.2;
+    takeProfit = resistance + spread * 0.12;
+    stopLoss = support - spread * 0.12;
   } else if (bias === 'Bearish') {
-    // Short near resistance, target below support, protect above resistance.
+    // Short near resistance, target just past support, protect above resistance.
     entry = resistance - spread * 0.15;
-    takeProfit = support - spread * 0.35;
-    stopLoss = resistance + spread * 0.2;
+    takeProfit = support - spread * 0.12;
+    stopLoss = resistance + spread * 0.12;
   } else {
     entry = currentPrice;
-    takeProfit = currentPrice + spread * 0.25;
-    stopLoss = currentPrice - spread * 0.25;
+    takeProfit = currentPrice + spread * 0.15;
+    stopLoss = currentPrice - spread * 0.15;
   }
 
   return {

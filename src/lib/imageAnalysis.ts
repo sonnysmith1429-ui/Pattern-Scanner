@@ -15,6 +15,12 @@ function rand(min: number, max: number) {
   return Math.random() * (max - min) + min;
 }
 
+// This app is aimed at intraday setups, so the whole support/resistance
+// band — and everything derived from it (entry, target, stop) — is kept
+// within a realistic same-day move instead of a multi-month swing range.
+const DAY_TRADE_MIN_PCT = 0.012;
+const DAY_TRADE_MAX_PCT = 0.035;
+
 function resolvePrice(manualPrice?: number): { price: number; source: 'manual' | 'estimated' } {
   if (typeof manualPrice === 'number' && Number.isFinite(manualPrice) && manualPrice > 0) {
     return { price: Math.round(manualPrice * 100) / 100, source: 'manual' };
@@ -69,13 +75,19 @@ function priceLevelsFromRows(
   bottomRow: number,
   currentRow: number,
   rowSpan: number,
+  height: number,
 ): { support: number; resistance: number } {
-  const pricePerRow = (currentPrice * 0.55) / Math.max(rowSpan, 1);
+  // How much of the image's vertical space the candles actually use — a
+  // proxy for "how choppy this chart looks" — scaled into the tight
+  // day-trade band rather than treated as a literal price fraction.
+  const shapeRatio = Math.max(0, Math.min(1, (bottomRow - topRow) / height));
+  const rangePct = DAY_TRADE_MIN_PCT + shapeRatio * (DAY_TRADE_MAX_PCT - DAY_TRADE_MIN_PCT);
+  const pricePerRow = (currentPrice * rangePct) / Math.max(rowSpan, 1);
   const rawResistance = currentPrice + Math.max(2, currentRow - topRow) * pricePerRow;
   const rawSupport = currentPrice - Math.max(2, bottomRow - currentRow) * pricePerRow;
   return {
-    resistance: Math.round(Math.max(rawResistance, currentPrice * 1.01) * 100) / 100,
-    support: Math.round(Math.min(rawSupport, currentPrice * 0.99) * 100) / 100,
+    resistance: Math.round(Math.max(rawResistance, currentPrice * 1.002) * 100) / 100,
+    support: Math.round(Math.min(rawSupport, currentPrice * 0.998) * 100) / 100,
   };
 }
 
@@ -84,7 +96,7 @@ function fallbackAnalysis(manualPrice?: number): ChartAnalysis {
   const bullishRatio = Math.max(0, Math.min(1, 0.5 + slope * 0.7 + rand(-0.12, 0.12)));
   const { trend, bias, biasConfidence } = classify(slope, bullishRatio);
   const { price: currentPrice, source: priceSource } = resolvePrice(manualPrice);
-  const spread = currentPrice * rand(0.08, 0.18);
+  const spread = currentPrice * rand(DAY_TRADE_MIN_PCT, DAY_TRADE_MAX_PCT);
   return {
     trend,
     bias,
@@ -170,6 +182,7 @@ function analyzePixels(img: HTMLImageElement, manualPrice?: number): ChartAnalys
     bottomRow,
     currentRow,
     Math.max(bottomRow - topRow, height * 0.12),
+    height,
   );
 
   return { trend, bias, biasConfidence, currentPrice, support, resistance, bullishRatio, priceSource };
