@@ -11,14 +11,26 @@ export default async function handler(req, res) {
   }
 
   try {
-    const url = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${encodeURIComponent(
-      ticker.trim().toUpperCase(),
-    )}&limit=8&apikey=${encodeURIComponent(apiKey.trim())}`;
+    // This app is about same-day setups, so stale headlines aren't useful
+    // context — pin the window to the last 48h and force newest-first
+    // instead of trusting whatever the provider would default to.
+    const timeFrom = new Date(Date.now() - 48 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 16)
+      .replace(/[-:]/g, '');
+
+    const url =
+      `https://www.alphavantage.co/query?function=NEWS_SENTIMENT` +
+      `&tickers=${encodeURIComponent(ticker.trim().toUpperCase())}` +
+      `&time_from=${timeFrom}` +
+      `&sort=LATEST` +
+      `&limit=12` +
+      `&apikey=${encodeURIComponent(apiKey.trim())}`;
 
     const upstream = await fetch(url);
     const data = await upstream.json();
 
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+    res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60');
     res.status(200).json(data);
   } catch {
     res.status(502).json({ error: 'Failed to reach news provider' });

@@ -41,25 +41,29 @@ export async function fetchNewsSignal(ticker: string, apiKey: string): Promise<N
     const feed = Array.isArray((data as { feed?: unknown[] })?.feed) ? (data as { feed: unknown[] }).feed : [];
     if (!feed.length) return null;
 
-    const articles: NewsArticle[] = feed.slice(0, 6).map((raw) => {
-      const item = raw as Record<string, unknown>;
-      const tickerSentiments = Array.isArray(item.ticker_sentiment)
-        ? (item.ticker_sentiment as Record<string, unknown>[])
-        : [];
-      const match = tickerSentiments.find((t) => t.ticker === symbol);
-      const label = match?.ticker_sentiment_label ?? item.overall_sentiment_label;
-      const rawScore = match?.ticker_sentiment_score ?? item.overall_sentiment_score;
-      const score = typeof rawScore === 'string' ? parseFloat(rawScore) : Number(rawScore);
+    const articles: NewsArticle[] = feed
+      .map((raw) => {
+        const item = raw as Record<string, unknown>;
+        const tickerSentiments = Array.isArray(item.ticker_sentiment)
+          ? (item.ticker_sentiment as Record<string, unknown>[])
+          : [];
+        const match = tickerSentiments.find((t) => t.ticker === symbol);
+        const label = match?.ticker_sentiment_label ?? item.overall_sentiment_label;
+        const rawScore = match?.ticker_sentiment_score ?? item.overall_sentiment_score;
+        const score = typeof rawScore === 'string' ? parseFloat(rawScore) : Number(rawScore);
 
-      return {
-        title: typeof item.title === 'string' ? item.title : 'Untitled',
-        source: typeof item.source === 'string' ? item.source : 'Unknown source',
-        url: typeof item.url === 'string' ? item.url : '#',
-        publishedAt: parseTimestamp(item.time_published as string | undefined),
-        sentiment: coerceSentiment(label),
-        sentimentScore: Number.isFinite(score) ? score : 0,
-      };
-    });
+        return {
+          title: typeof item.title === 'string' ? item.title : 'Untitled',
+          source: typeof item.source === 'string' ? item.source : 'Unknown source',
+          url: typeof item.url === 'string' ? item.url : '#',
+          publishedAt: parseTimestamp(item.time_published as string | undefined),
+          sentiment: coerceSentiment(label),
+          sentimentScore: Number.isFinite(score) ? score : 0,
+        };
+      })
+      // Don't trust the provider's ordering — always show newest first.
+      .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+      .slice(0, 6);
 
     if (!articles.length) return null;
 
