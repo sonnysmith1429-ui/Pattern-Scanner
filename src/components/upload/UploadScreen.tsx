@@ -133,13 +133,15 @@ export default function UploadScreen({
                   <p className="font-medium mb-1">Drop your chart image here</p>
                   <p className="text-sm text-white/40">PNG, JPEG, HEIC or WebP — up to 20MB</p>
                 </div>
-                <GlowButton
-                  size="md"
-                  icon={<ImageIcon size={16} />}
-                  onClick={() => inputRef.current?.click()}
-                >
-                  Choose File
-                </GlowButton>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <GlowButton
+                    size="md"
+                    icon={<ImageIcon size={16} />}
+                    onClick={() => inputRef.current?.click()}
+                  >
+                    Choose File
+                  </GlowButton>
+                </div>
                 <input
                   ref={inputRef}
                   type="file"
@@ -286,14 +288,22 @@ export default function UploadScreen({
               </p>
 
               <div className="mt-6 flex justify-center">
-                <GlowButton
-                  size="lg"
-                  icon={<ScanLine size={20} />}
-                  onClick={() => onScan(image, parsePrice(priceInput), tickerInput.trim() || undefined)}
-                  className="shadow-[0_0_50px_rgba(59,130,246,0.45)] animate-pulse-glow"
-                >
-                  Scan Pattern
-                </GlowButton>
+                <div className="relative inline-block">
+                  <motion.div
+                    className="absolute inset-0 rounded-2xl bg-blue-500 pointer-events-none"
+                    style={{ filter: 'blur(24px)' }}
+                    animate={{ opacity: [0.35, 0.7, 0.35] }}
+                    transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                  <GlowButton
+                    size="lg"
+                    icon={<ScanLine size={20} />}
+                    onClick={() => onScan(image, parsePrice(priceInput), tickerInput.trim() || undefined)}
+                    className="relative shadow-[0_0_50px_rgba(59,130,246,0.45)]"
+                  >
+                    Scan Pattern
+                  </GlowButton>
+                </div>
               </div>
             </motion.div>
           )}
