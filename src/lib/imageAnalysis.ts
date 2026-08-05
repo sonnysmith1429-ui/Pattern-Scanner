@@ -9,6 +9,15 @@ export interface ChartAnalysis {
   resistance: number;
   bullishRatio: number;
   priceSource: 'manual' | 'estimated';
+  /**
+   * False when the image had no candle-like colored structure to detect at
+   * all (a random photo, a blank image, a failed load) — the rest of the
+   * fields are still populated so this type stays easy to work with, but
+   * callers must check this before presenting a scan result as real,
+   * rather than confidently showing a fabricated analysis for a non-chart
+   * image.
+   */
+  hasChartSignal: boolean;
 }
 
 function rand(min: number, max: number) {
@@ -106,6 +115,7 @@ function fallbackAnalysis(manualPrice?: number): ChartAnalysis {
     resistance: Math.round((currentPrice + spread / 2) * 100) / 100,
     bullishRatio,
     priceSource,
+    hasChartSignal: false,
   };
 }
 
@@ -137,8 +147,12 @@ function analyzePixels(img: HTMLImageElement, manualPrice?: number): ChartAnalys
       const r = data[i];
       const g = data[i + 1];
       const b = data[i + 2];
-      const isGreen = g > r + 18 && g > b + 8 && g > 60;
-      const isRed = r > g + 18 && r > b - 10 && r > 70;
+      // Requires real saturation against BOTH other channels — a warm/cool
+      // photo tone (skin, wood, sunset, foliage) typically dominates one
+      // other channel but not both this strongly, whereas the vivid
+      // red/green used for candles on virtually every charting platform does.
+      const isGreen = g > r + 40 && g > b + 40 && g > 90;
+      const isRed = r > g + 40 && r > b + 40 && r > 90;
       if (!isGreen && !isRed) continue;
       if (isGreen) greenCount++;
       else redCount++;
@@ -157,7 +171,23 @@ function analyzePixels(img: HTMLImageElement, manualPrice?: number): ChartAnalys
   const activeCols: number[] = [];
   for (let x = 0; x < width; x++) if (colTop[x] !== -1) activeCols.push(x);
 
-  if (activeCols.length < 8 || greenCount + redCount < 40) {
+  // Candles form many separate thin vertical bands with background gaps
+  // between them — a photo with a red- or green-dominant region instead
+  // forms one (or a few) large contiguous blobs. Counting distinct runs of
+  // active columns catches that even when the color check alone wouldn't.
+  let segments = 0;
+  let wasActive = false;
+  for (let x = 0; x < width; x++) {
+    const isColActive = colTop[x] !== -1;
+    if (isColActive && !wasActive) segments++;
+    wasActive = isColActive;
+  }
+
+  // Candles are sparse against their background — a real chart is mostly
+  // empty space/gridlines, not more than half colored pixels.
+  const coloredRatio = (greenCount + redCount) / (width * height);
+
+  if (activeCols.length < 8 || greenCount + redCount < 40 || segments < 5 || coloredRatio > 0.5) {
     return fallbackAnalysis(manualPrice);
   }
 
@@ -185,7 +215,7 @@ function analyzePixels(img: HTMLImageElement, manualPrice?: number): ChartAnalys
     height,
   );
 
-  return { trend, bias, biasConfidence, currentPrice, support, resistance, bullishRatio, priceSource };
+  return { trend, bias, biasConfidence, currentPrice, support, resistance, bullishRatio, priceSource, hasChartSignal: true };
 }
 
 /**

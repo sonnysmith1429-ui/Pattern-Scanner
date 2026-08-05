@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { ScanLine, History, Bookmark, Settings as SettingsIcon, User } from 'lucide-react';
 import Logo from '../ui/Logo';
 
-export type Screen = 'upload' | 'scanning' | 'dashboard' | 'history' | 'watchlist' | 'settings' | 'profile';
+export type Screen = 'upload' | 'scanning' | 'dashboard' | 'rejected' | 'history' | 'watchlist' | 'settings' | 'profile';
 
 const NAV_ITEMS: { screen: Screen; label: string; icon: React.ReactNode }[] = [
   { screen: 'upload', label: 'Scan', icon: <ScanLine size={18} /> },
@@ -13,7 +13,9 @@ const NAV_ITEMS: { screen: Screen; label: string; icon: React.ReactNode }[] = [
 ];
 
 function isActive(current: Screen, item: Screen) {
-  if (item === 'upload') return current === 'upload' || current === 'scanning' || current === 'dashboard';
+  if (item === 'upload') {
+    return current === 'upload' || current === 'scanning' || current === 'dashboard' || current === 'rejected';
+  }
   return current === item;
 }
 

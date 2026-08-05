@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Landing from './components/landing/Landing';
 import UploadScreen from './components/upload/UploadScreen';
+import ChartNotDetected from './components/upload/ChartNotDetected';
 import ScanningAnimation from './components/scan/ScanningAnimation';
 import Dashboard from './components/dashboard/Dashboard';
 import History from './components/history/History';
@@ -60,6 +61,10 @@ export default function App() {
   async function handleScanComplete() {
     if (!pendingImage || !pendingAnalysis.current) return;
     const [analysis, news] = await Promise.all([pendingAnalysis.current, pendingNews.current ?? Promise.resolve(null)]);
+    if (!analysis.hasChartSignal) {
+      setScreen('rejected');
+      return;
+    }
     const result = generateScanResult(pendingImage, analysis, news);
     setCurrentResult(result);
     setHistory((h) => [result, ...h]);
@@ -147,6 +152,25 @@ export default function App() {
             </motion.div>
           )}
 
+          {screen === 'rejected' && pendingImage && (
+            <motion.div
+              key="rejected"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ChartNotDetected
+                image={pendingImage}
+                onRetry={() => {
+                  setPendingImage(null);
+                  setScreen('upload');
+                }}
+                onTryDemo={handleDemo}
+              />
+            </motion.div>
+          )}
+
           {screen === 'dashboard' && currentResult && (
             <motion.div
               key="dashboard"
@@ -208,7 +232,7 @@ export default function App() {
         </AnimatePresence>
       </div>
 
-      {screen !== 'landing' && screen !== 'dashboard' && screen !== 'scanning' && (
+      {screen !== 'landing' && screen !== 'dashboard' && screen !== 'scanning' && screen !== 'rejected' && (
         <div className="hidden sm:block px-6 pb-6 max-w-6xl mx-auto w-full">
           <Disclaimer compact />
         </div>
