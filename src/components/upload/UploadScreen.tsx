@@ -274,8 +274,7 @@ export default function UploadScreen({
                     value={tickerInput}
                     onChange={(e) => setTickerInput(e.target.value.toUpperCase())}
                     placeholder="e.g. AAPL"
-                    disabled={!newsEnabled}
-                    className="w-full glass rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-400/50 placeholder:text-white/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full glass rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-400/50 placeholder:text-white/30"
                   />
                 </div>
               </div>
