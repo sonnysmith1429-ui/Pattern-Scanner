@@ -138,12 +138,30 @@ function generateIndicators(
   };
 }
 
+/**
+ * Rough same-day hold-time estimate. Not a prediction of when a trade will
+ * actually resolve — just a bounded, explainable heuristic: setups with
+ * higher volatility/trend strength/momentum are treated as likely to reach
+ * their target or stop faster, calmer ones as likely to take longer, always
+ * kept within an intraday window (20 minutes to 6 hours) consistent with
+ * this app's same-day framing.
+ */
+function estimateHoldTime(volatility: number, trendStrength: number, momentum: number): { min: number; max: number } {
+  const speed = Math.max(0, Math.min(1, (volatility * 0.4 + trendStrength * 0.35 + momentum * 0.25) / 100));
+  const minMinutes = Math.round(20 + (1 - speed) * 220);
+  const maxMinutes = Math.min(360, Math.round(minMinutes * rand(1.5, 2.3)));
+  return { min: minMinutes, max: maxMinutes };
+}
+
 function generateTradeBias(
   bias: Bias,
   support: number,
   resistance: number,
   currentPrice: number,
   confidence: number,
+  volatility: number,
+  trendStrength: number,
+  momentum: number,
 ): TradeBias {
   // This app targets intraday setups, so the whole band stays within a
   // realistic same-day move — a small floor keeps flat charts from
@@ -170,6 +188,8 @@ function generateTradeBias(
     stopLoss = currentPrice - spread * 0.15;
   }
 
+  const holdTime = estimateHoldTime(volatility, trendStrength, momentum);
+
   return {
     bias,
     confidence: Math.max(52, Math.min(96, confidence + randInt(-4, 4))),
@@ -178,6 +198,8 @@ function generateTradeBias(
     stopLoss: Math.round(stopLoss * 100) / 100,
     supportZone: support,
     resistanceZone: resistance,
+    holdMinutesMin: holdTime.min,
+    holdMinutesMax: holdTime.max,
   };
 }
 
@@ -330,7 +352,16 @@ export function generateScanResult(
   const adjustedConfidence = applyNewsToConfidence(bias, biasConfidence, news);
   const patterns = generatePatterns(bias);
   const indicators = generateIndicators(trend, support, resistance, currentPrice);
-  const tradeBias = generateTradeBias(bias, support, resistance, currentPrice, adjustedConfidence);
+  const tradeBias = generateTradeBias(
+    bias,
+    support,
+    resistance,
+    currentPrice,
+    adjustedConfidence,
+    indicators.volatility,
+    indicators.trendStrength,
+    indicators.momentum,
+  );
   const overallConfidence = Math.round(
     (patterns.reduce((s, p) => s + p.confidence, 0) / patterns.length) * 0.45 +
       tradeBias.confidence * 0.3 +

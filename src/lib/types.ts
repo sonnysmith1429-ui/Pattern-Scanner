@@ -35,6 +35,8 @@ export interface TradeBias {
   stopLoss: number;
   supportZone: number;
   resistanceZone: number;
+  holdMinutesMin: number;
+  holdMinutesMax: number;
 }
 
 export interface Annotation {

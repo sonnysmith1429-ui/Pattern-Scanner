@@ -1,4 +1,4 @@
-import { ArrowUpRight, ArrowDownRight, Minus, Target, ShieldAlert, CheckCircle2, Wand2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus, Target, Clock, ShieldAlert, CheckCircle2, Wand2 } from 'lucide-react';
 import type { TradeBias } from '../../lib/types';
 import GlassCard from '../ui/GlassCard';
 import Badge from '../ui/Badge';
@@ -8,6 +8,12 @@ const BIAS_STYLE = {
   Bearish: { tone: 'danger' as const, icon: <ArrowDownRight size={14} /> },
   Neutral: { tone: 'neutral' as const, icon: <Minus size={14} /> },
 };
+
+function formatMinutes(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = minutes / 60;
+  return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`;
+}
 
 export default function TradeBiasCard({
   bias,
@@ -19,6 +25,8 @@ export default function TradeBiasCard({
   priceSource: 'manual' | 'estimated';
 }) {
   const style = BIAS_STYLE[bias.bias];
+  const holdLabel = `~${formatMinutes(bias.holdMinutesMin)}–${formatMinutes(bias.holdMinutesMax)}`;
+
   return (
     <GlassCard delay={0.2} className="col-span-1 lg:col-span-2">
       <div className="flex items-center justify-between mb-1">
@@ -42,26 +50,38 @@ export default function TradeBiasCard({
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
-        <Zone label="Entry Area" value={bias.entry} tone="accent" />
-        <Zone label="Take-Profit" value={bias.takeProfit} tone="success" />
-        <Zone label="Stop-Loss" value={bias.stopLoss} tone="danger" />
-        <Zone label="Support Zone" value={bias.supportZone} tone="neutral" />
-        <Zone label="Resistance Zone" value={bias.resistanceZone} tone="neutral" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+        <Zone label="Entry Area" value={`$${bias.entry.toFixed(2)}`} tone="accent" icon={<Target size={10} />} />
+        <Zone label="Take-Profit" value={`$${bias.takeProfit.toFixed(2)}`} tone="success" icon={<Target size={10} />} />
+        <Zone label="Stop-Loss" value={`$${bias.stopLoss.toFixed(2)}`} tone="danger" icon={<Target size={10} />} />
+        <Zone label="Support Zone" value={`$${bias.supportZone.toFixed(2)}`} tone="neutral" icon={<Target size={10} />} />
+        <Zone label="Resistance Zone" value={`$${bias.resistanceZone.toFixed(2)}`} tone="neutral" icon={<Target size={10} />} />
+        <Zone label="Est. Hold Time" value={holdLabel} tone="accent" icon={<Clock size={10} />} />
       </div>
 
       <div className="flex items-start gap-2.5 rounded-xl bg-orange-500/10 border border-orange-500/20 px-4 py-3 text-xs text-orange-200/80">
         <ShieldAlert size={15} className="shrink-0 mt-0.5 text-orange-400" />
         <p>
-          These entry, target and stop levels are illustrative examples for educational purposes only —
-          not financial advice or a recommendation to trade.
+          These entry, target, stop and hold-time levels are illustrative examples for educational
+          purposes only — not financial advice or a recommendation to trade. Real setups can resolve
+          faster, slower, or not at all.
         </p>
       </div>
     </GlassCard>
   );
 }
 
-function Zone({ label, value, tone }: { label: string; value: number; tone: 'accent' | 'success' | 'danger' | 'neutral' }) {
+function Zone({
+  label,
+  value,
+  tone,
+  icon,
+}: {
+  label: string;
+  value: string;
+  tone: 'accent' | 'success' | 'danger' | 'neutral';
+  icon: React.ReactNode;
+}) {
   const colors: Record<string, string> = {
     accent: 'text-blue-400',
     success: 'text-emerald-400',
@@ -71,9 +91,9 @@ function Zone({ label, value, tone }: { label: string; value: number; tone: 'acc
   return (
     <div className="rounded-xl bg-white/[0.03] px-3 py-3 text-center">
       <p className="text-[10px] uppercase tracking-wide text-white/40 mb-1 flex items-center justify-center gap-1">
-        <Target size={10} /> {label}
+        {icon} {label}
       </p>
-      <p className={`font-semibold tabular-nums ${colors[tone]}`}>${value.toFixed(2)}</p>
+      <p className={`font-semibold tabular-nums ${colors[tone]}`}>{value}</p>
     </div>
   );
 }

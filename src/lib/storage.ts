@@ -18,13 +18,18 @@ function safeParse<T>(raw: string | null, fallback: T): T {
 export function loadHistory(): ScanResult[] {
   const raw = safeParse<Partial<ScanResult>[]>(localStorage.getItem(KEYS.history), []);
   // Scans saved by an earlier version of the app (before currentPrice/
-  // priceSource/news existed) won't have those fields — normalize so
-  // opening an old scan doesn't crash the dashboard.
+  // priceSource/news/holdMinutes existed) won't have those fields —
+  // normalize so opening an old scan doesn't crash the dashboard.
   return raw.map((r) => ({
     ...r,
     currentPrice: r.currentPrice ?? 0,
     priceSource: r.priceSource ?? 'estimated',
     news: r.news ?? null,
+    tradeBias: {
+      holdMinutesMin: 30,
+      holdMinutesMax: 90,
+      ...r.tradeBias,
+    } as ScanResult['tradeBias'],
   })) as ScanResult[];
 }
 
