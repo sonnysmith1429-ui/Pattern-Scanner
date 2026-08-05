@@ -139,9 +139,9 @@ export default function Settings({
           Get a free API key at alphavantage.co →
         </a>
         <p className="text-[11px] text-white/30 mt-2 leading-relaxed">
-          Stored only in this browser. News fetching runs directly from your device to Alpha
-          Vantage, so it works once this app is deployed to your own domain — it won't run inside
-          a Claude Artifact preview, which blocks outside network requests.
+          Stored only in this browser. News requests go through this app's own server function,
+          so it works on hosts that support them (like Vercel) — not on static-only hosting or
+          inside a Claude Artifact preview, which blocks outside network requests entirely.
         </p>
       </GlassCard>
 

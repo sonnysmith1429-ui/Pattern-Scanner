@@ -1,11 +1,12 @@
 import type { NewsArticle, NewsSentiment, NewsSignal } from './types';
 
-// Alpha Vantage's free NEWS_SENTIMENT endpoint: ticker-based financial
-// headlines with a pre-computed sentiment score per article, so this app
-// doesn't need to run its own NLP on headline text. Free tier is modest
-// (a handful of requests per day) — plenty for a single manual scan, not
-// for polling.
-const ALPHA_VANTAGE_URL = 'https://www.alphavantage.co/query';
+// Requests go through this app's own /api/news serverless function (see
+// api/news.js) rather than hitting Alpha Vantage directly from the browser —
+// a same-origin call sidesteps any CORS restriction the provider might
+// place on direct client-side requests, and only works once this is
+// deployed somewhere with serverless functions (e.g. Vercel), not as a
+// static-only page.
+const NEWS_PROXY_URL = '/api/news';
 
 function parseTimestamp(raw: string | undefined): string {
   const match = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/.exec(raw ?? '');
@@ -21,10 +22,11 @@ function coerceSentiment(label: unknown): NewsSentiment {
 }
 
 /**
- * Fetches recent news + sentiment for a ticker. Returns null on any
- * failure — missing key, no ticker, network/CORS error, rate limiting, or
- * an unexpected response shape — so a scan never breaks because live news
- * wasn't reachable; it just proceeds without that signal.
+ * Fetches recent news + sentiment for a ticker via the /api/news proxy.
+ * Returns null on any failure — missing key, no ticker, the proxy route
+ * not existing (static-only hosting), rate limiting, or an unexpected
+ * response shape — so a scan never breaks because live news wasn't
+ * reachable; it just proceeds without that signal.
  */
 export async function fetchNewsSignal(ticker: string, apiKey: string): Promise<NewsSignal | null> {
   const symbol = ticker.trim().toUpperCase();
@@ -32,7 +34,7 @@ export async function fetchNewsSignal(ticker: string, apiKey: string): Promise<N
   if (!symbol || !key) return null;
 
   try {
-    const url = `${ALPHA_VANTAGE_URL}?function=NEWS_SENTIMENT&tickers=${encodeURIComponent(symbol)}&limit=8&apikey=${encodeURIComponent(key)}`;
+    const url = `${NEWS_PROXY_URL}?ticker=${encodeURIComponent(symbol)}&apiKey=${encodeURIComponent(key)}`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const data: unknown = await res.json();
